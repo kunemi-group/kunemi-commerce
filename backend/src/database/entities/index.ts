@@ -8,3 +8,7 @@ export { OrderStatusHistory } from './order-status-history.entity';
 export { Delivery } from './delivery.entity';
 export { DeliveryStatusEvent } from './delivery-status-event.entity';
 export { Payment } from './payment.entity';
+export { Quotation } from './quotation.entity';
+export { QuotationItem } from './quotation-item.entity';
+export { Invoice } from './invoice.entity';
+export { InvoiceItem } from './invoice-item.entity';

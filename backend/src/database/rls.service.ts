@@ -41,6 +41,8 @@ export class RlsService implements OnModuleInit {
       'orders',
       'deliveries',
       'payments',
+      'quotations',
+      'invoices',
     ];
 
     // ENABLE only (not FORCE) so the table owner (app role) can seed/migrate.
@@ -55,6 +57,8 @@ export class RlsService implements OnModuleInit {
       'order_items',
       'order_status_history',
       'delivery_status_events',
+      'quotation_items',
+      'invoice_items',
     ]) {
       await this.dataSource.query(
         `ALTER TABLE IF EXISTS ${table} ENABLE ROW LEVEL SECURITY`,
@@ -82,6 +86,8 @@ export class RlsService implements OnModuleInit {
       'orders',
       'deliveries',
       'payments',
+      'quotations',
+      'invoices',
     ];
     for (const table of directBiz) {
       const policy = `tenant_${table}`;
@@ -92,6 +98,45 @@ export class RlsService implements OnModuleInit {
           WITH CHECK (business_id::text = current_setting('app.current_business_id', true))
       `);
     }
+
+    // Child tables via parent business_id
+    await drop('tenant_quotation_items', 'quotation_items');
+    await this.dataSource.query(`
+      CREATE POLICY tenant_quotation_items ON quotation_items
+        USING (
+          EXISTS (
+            SELECT 1 FROM quotations q
+            WHERE q.id = quotation_items.quotation_id
+              AND q.business_id::text = current_setting('app.current_business_id', true)
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM quotations q
+            WHERE q.id = quotation_items.quotation_id
+              AND q.business_id::text = current_setting('app.current_business_id', true)
+          )
+        )
+    `);
+
+    await drop('tenant_invoice_items', 'invoice_items');
+    await this.dataSource.query(`
+      CREATE POLICY tenant_invoice_items ON invoice_items
+        USING (
+          EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE i.id = invoice_items.invoice_id
+              AND i.business_id::text = current_setting('app.current_business_id', true)
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE i.id = invoice_items.invoice_id
+              AND i.business_id::text = current_setting('app.current_business_id', true)
+          )
+        )
+    `)
 
     // Public pay page: read payment + order + business by token without tenant GUC
     await this.dataSource.query(`

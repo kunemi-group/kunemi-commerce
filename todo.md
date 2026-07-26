@@ -1,8 +1,11 @@
 # Kunemi Workspace — Project status & todo
 
-**Last updated:** 2026-07-17  
+**Last updated:** 2026-07-26  
+**Product:** Kunemi Workspace under **Kunemi Commerce**  
+**Repo:** https://github.com/kunemi-group/kunemi-commerce.git  
+**Note:** `docs/` is gitignored (local confidential product docs only).
 
-**Current state:** Strong **Next.js** frontend + **NestJS API on Docker Postgres** with JWT auth, freeform/catalog orders, stock holds, **bank-transfer payments (default)**, delivery + public tracking, and **Postgres RLS**.
+**Current state:** Multi-tenant NestJS API on Docker Postgres (JWT, orders, optional inventory, bank-transfer payments, deliveries, tracking, **quotations/invoices**, RLS) with Next.js UI largely wired via **Axios + TanStack Query**. Phase 1 commerce + documents loop works; messaging and AI remain UI-only.
 
 ### How to run
 
@@ -15,10 +18,11 @@ npm install
 npm run start:dev   # http://localhost:3001/api/health
 # seed: owner@lagosthreads.co / password123
 
-# UI (Next.js) — still mock data
+# UI (Next.js) — live API for core commerce screens
 cd frontend
 pnpm install
 pnpm dev            # http://localhost:3000
+pnpm test           # Vitest (api layer + totals)
 ```
 
 ---
@@ -27,14 +31,22 @@ pnpm dev            # http://localhost:3000
 
 | Layer | Status |
 |-------|--------|
-| Product docs (PRD + Phase 1 tech plan) | Done (Next.js + optional inventory) |
-| Frontend UI (Next.js + shadcn, mock data) | **Strong** — freeform + catalog orders |
-| NestJS + persistence (JWT, orders, products, payments, deliveries, tracking) | **Done on Postgres** (+ SQLite fallback) |
-| Postgres RLS | **Done** (ENABLE policies + public tracking/pay definer fns) |
-| Wire frontend → API | **Mostly done** — auth, orders, payments, inventory, deliveries, track, settings, team |
-| Payments module | **Bank transfer default done**; card gateway later |
-| AI agent runtime | **UI placeholder only** |
-| Integrations (WA/IG, pay gateway, courier) | **Not started** |
+| Product docs (PRD + Phase 1 tech plan) | Done (local `docs/`, not in git) |
+| NestJS + Postgres persistence | **Done** (+ SQLite fallback) |
+| Postgres RLS + public pay/track definer paths | **Done** |
+| Bank-transfer payments (default) | **Done** end-to-end |
+| Frontend API layer (`frontend/api`) | **Done** — Axios + TanStack Query + Vitest |
+| Wire core commerce UI → API | **Done** — auth, onboarding, orders, pay, payments, inventory, deliveries, track, settings, team |
+| Dashboard KPIs (counts / revenue / review) | **Live** from orders/payments |
+| Dashboard charts (revenue series, payment split) | **Live** (14-day revenue + payment methods) |
+| Product create / edit / variant / restock / delete UI | **Done** |
+| Sales team home widget | **Live roster** (no fake conversion metrics) |
+| Quotations / invoices | **Done** — API + create/list/status + PDF preview |
+| Team invite / RBAC mutations | **Done** — invite, role change, remove + RolesGuard |
+| AI agent runtime | **UI placeholder** |
+| Integrations (WA/IG, card gateway, courier APIs) | **Not started** |
+
+**Rough completion:** backend Phase 1 ~**95%** · frontend live-wired ~**90%**
 
 ---
 
@@ -42,120 +54,130 @@ pnpm dev            # http://localhost:3000
 
 ### Product model (decisions locked)
 
-- [x] Social commerce OS positioning (chat-first, not storefront-first)
+- [x] Social commerce OS (chat-first, not storefront-first)
 - [x] **Sales Team** (humans + roles) vs **AI Agents** (tier-gated, separate nav)
 - [x] Tier limits: team seats vs AI seats (Starter / Growth / Scale)
 - [x] VAT: rate from settings; **products only** (never shipping); tax-free line exemption
 - [x] Shipping as separate fee on orders / quotes / invoices
-- [x] **Inventory optional** — freeform lines work with no catalog; stock holds only for variants
-- [x] Payments: card + bank transfer + proof-of-payment review concept
-- [x] Quotations + invoices as first-class commerce documents
-- [x] Docs: frontend stack **Next.js** (not Vite)
-- [x] NestJS monorepo `backend/` scaffold (health, team, inventory, orders, payments, deliveries, tracking)
-- [x] JWT register/login + global auth guard + tenant JWT claims
-- [x] TypeORM entities + Postgres (Docker) primary; SQLite (`better-sqlite3`) local fallback
-- [x] Persist freeform + catalog orders; reserve stock only for `variantId` lines; cancel + expiry cron
+- [x] **Inventory optional** — freeform lines with no catalog; stock holds only for variants
+- [x] Payments: bank transfer default + proof-of-payment review (card later)
+- [x] Quotations + invoices as first-class commerce documents (product intent; server TBD)
+- [x] Frontend stack **Next.js** (App Router + shadcn)
+- [x] Branding: **Kunemi Workspace** (not ShopFlow)
+
+### Backend (NestJS)
+
+- [x] Module layout: auth, businesses, inventory, orders, payments, deliveries, tracking, team, health
+- [x] JWT register / login / `GET /auth/me` + global guard + tenant claims
+- [x] TypeORM entities; Postgres (Docker) primary; SQLite local fallback
+- [x] Freeform + catalog orders; reserve stock only when `variantId` set; cancel + expiry cron
+- [x] Order list/detail embeds payment + delivery
+- [x] Products / variants CRUD + restock APIs
+- [x] `GET/PATCH /businesses/me` (tax, shipping, bank, brand, onboarding status)
+- [x] Bank transfer payments: pay token, countdown, claim + optional proof, verify/reject → order `paid`
+- [x] Public pay: `GET/POST /api/pay/:token` (+ RLS-safe public access)
+- [x] Payments review: list, verify, reject, proof file
+- [x] Deliveries: create, list, status transitions, order status sync
+- [x] Public tracking: `GET /api/tracking/:token`
+- [x] Postgres RLS + tenant GUC interceptor; SECURITY DEFINER for public track/pay
 - [x] Demo seed: `owner@lagosthreads.co` / `password123`
-- [x] **Deliveries persistence** — create, list, status transitions, order status sync
-- [x] **Public tracking** — `/api/tracking/:token` with timeline, items, business info
-- [x] **Postgres RLS** — tenant policies on core tables; SECURITY DEFINER for public tracking
-- [x] Tenant interceptor sets `app.current_business_id` GUC (Postgres only)
-- [x] **Bank transfer default payment** — business account details, 30m countdown, customer “I paid” + optional proof, business verify → order `paid`
-- [x] Public pay page `GET/POST /api/pay/:token` + frontend `/pay/[token]`
-- [x] Business review queue `GET /api/payments`, verify/reject + proof file
 
-### Frontend routes & UX (mock-backed)
+### Frontend (Next.js)
 
-| Route | What works |
-|-------|------------|
-| `/` | Owner dashboard — KPIs, charts, attention inbox, onboarding |
-| `/workspace` | Sales floor — chats, pipeline, create-order drawer |
-| `/orders` | Filters, hold countdown, detail sheet, new order |
-| `/inventory` | Stock, reserved holds, tax-free product tags |
-| `/quotations` | Quote list + send/share UX |
-| `/invoices` | Invoice list + send/share UX |
-| `/documents/quotation/[id]` | PDF template preview + download |
-| `/documents/invoice/[id]` | PDF template preview + download |
-| `/payments` | Review queue + proof dialog (UI only) |
-| `/deliveries` | Fulfillment modes + tracking link copy |
-| `/team` | Sales team roster & performance |
-| `/ai-agents` | Tier-gated AI seats placeholder |
-| `/settings` | Business, bank, payments, branding, VAT, default shipping |
-| `/track/[token]` | Public customer tracking page |
-| `/agents` | Redirects → `/team` |
+#### API layer (`frontend/api`)
 
-Also done:
+- [x] Axios client + token storage + error helpers
+- [x] Services: auth, orders, products, payments, deliveries, team
+- [x] TanStack Query hooks + query keys + QueryClient provider
+- [x] Format helpers (`formatNgn`, `shortId`, `flattenInventory`, …)
+- [x] Vitest + RTL: client, format, use-orders, pdf totals
+- [x] Legacy `lib/api` re-exports / `apiGet`/`apiSend` deprecated (no UI callers)
 
-- [x] Role demo switcher (owner vs sales teammate shell)
-- [x] WhatsApp copy helpers, hold countdown, empty states, motion/density polish
-- [x] Totals engine: merchandise + tax-free + shipping + VAT on taxable products only (`frontend/lib/pdf/totals.ts`)
-- [x] Branding (logo/color/VAT/default shipping) via localStorage for demo
-- [x] Next config fix so `@react-pdf/renderer` does not crash the app
+#### Live against API
 
-### Docs present
+| Route / surface | Status |
+|-----------------|--------|
+| `/login`, `/register` | Live auth |
+| `/onboarding` | Forced when incomplete; PATCH business |
+| `/` | Live KPIs, revenue chart, payment split, attention inbox, recent orders, low stock, order status, team roster |
+| `/workspace` | Live pipeline + create order; **open chats still sample** |
+| `/orders` | Live table, KPIs, create/detail (cancel, create delivery) |
+| `/payments` | Live review queue + verify/reject + proof open |
+| `/inventory` | Live list, restock, create/edit product & variant, delete, KPIs |
+| `/deliveries` | Live table + status, KPIs |
+| `/team` | Live member list + KPIs |
+| `/settings` | Live business/bank/tax/shipping/brand PATCH |
+| `/pay/[token]` | Public bank-transfer pay + claim (TanStack) |
+| `/track/[token]` | Public tracking (TanStack) |
 
-- [x] `docs/Omnicommerce_Ecosystem_Master_PRD_v2_1.docx`
-- [x] `docs/Phase1_Technical_Build_Plan.md` (API/DB design; not implemented)
-- [x] `backend/README.md` updated for Postgres, deliveries, RLS
+#### Still mock / UI-only
+
+| Route / surface | Notes |
+|-----------------|-------|
+| `/quotations`, `/documents/quotation/[id]` | Mock data + PDF preview |
+| `/invoices`, `/documents/invoice/[id]` | Mock data + PDF preview |
+| `/ai-agents` | Tier placeholder only |
+| Workspace open chats | Sample inbox until messaging API |
+| Role demo switcher | Local role UX; not full server RBAC |
+| Export buttons | Chrome only |
+| Chat→paid conversion on team widget | Needs messaging attribution |
+| Hosted public quote/invoice pay link | Internal preview + WhatsApp share for now |
+
+#### Other frontend done
+
+- [x] AuthGate + session restore via `/auth/me`
+- [x] Create-order drawer: freeform or catalog; bank transfer default; pay-link WhatsApp copy
+- [x] Order detail: cancel, create delivery, share pay/track messages
+- [x] Totals engine: merchandise + tax-free + shipping + VAT on taxable products (`lib/pdf/totals.ts`)
+- [x] WhatsApp deep-link helpers, hold countdown, empty states
+- [x] Repo branding rename ShopFlow → Kunemi Workspace; `docs/` ignored
 
 ---
 
 ## Yet to be done
 
-### P0 — Backend / system of record
+### P0 — Close remaining Phase 1 gaps
 
-- [x] NestJS API scaffold (module layout, `/api` prefix, port 3001)
-- [x] JWT auth + multi-tenant `businessId` on token
-- [x] Persist freeform + variant order lines; reserve stock **only** when `variantId` set
-- [x] Order cancel + expiry cron (variant holds only)
-- [x] Postgres via Docker + RLS policies (ENABLE; FORCE/non-owner role optional later)
-- [x] Deliveries + public tracking persistence
-- [x] Bank transfer payments + RLS on `payments` (+ optional proof upload)
-- [ ] Card gateway webhooks (optional path later)
-- [x] Wire remaining frontend (orders, inventory, deliveries, track, settings, team) off mocks → API
-- [ ] Dashboard KPIs/charts still mock (derive later)
-- [ ] Cloudflare Worker edge webhook ingestion (payments, courier; later WA/IG)
+- [x] Product create / edit / add-variant / delete UI (backend already supported)
+- [x] Dashboard revenue + payment-split charts from real orders/payments
+- [x] Empty states on charts + team roster (no fake conversion %)
 - [ ] Optional: non-owner DB role + `FORCE ROW LEVEL SECURITY`
+- [ ] Deploy pipeline (frontend host + API + Postgres)
 
-### P1 — Product flows still UI-only or incomplete
+### P1 — Documents & team depth
 
-- [x] Persist create-order from Next.js UI (server inventory reserve + payment link)
-- [x] Real bank-transfer pay link + countdown + claim + verify → `paid`
-- [ ] Card gateway webhooks (secondary method)
-- [ ] Courier API providers + webhooks (manual mode already works)
-- [ ] Quote → accept → invoice/order conversion (server)
-- [ ] Invoice pay + status lifecycle (server)
-- [ ] Email send of PDF (quotes/invoices), not only mailto/copy
-- [ ] Host PDF and share link for WhatsApp (not only clipboard message)
-- [ ] True RBAC (owner / manager / sales / ops) beyond demo role switcher
-- [x] Branding / VAT / shipping / bank settings on **business record** (`PATCH /businesses/me`)
-- [x] Inventory update + restock APIs
-- [x] Order list/detail embed payment + delivery
-- [x] `GET /auth/me` for SPA session
-- [x] UI register + login + forced onboarding wizard (bank, WhatsApp, address, tax/shipping, brand)
-- [x] Register leaves bank empty until onboarding completes
+- [x] Quotes entities + APIs (create, list, send, accept)
+- [x] Invoices entities + APIs (create, list, send, mark-paid, void)
+- [x] Quote → convert to invoice
+- [x] Wire quotations/invoices UI + KPIs + PDF preview off API
+- [ ] Email send or hosted public document links (beyond clipboard/WhatsApp)
+- [ ] Quote/invoice → order conversion (optional path)
+- [x] Team invite + role mutations (owner / manager / sales / ops)
+- [x] RolesGuard on team manage + business settings PATCH
+- [ ] Broader per-route RBAC matrix (sales vs ops capabilities)
+- [ ] Password change / forced reset after invite
 
-### P2 — AI Agents (deferred by design)
+### P2 — Integrations
 
-- [ ] Design AI agent tools (catalog Q&A, create order, send quote/invoice, payment follow-up, handoff to Sales Team)
+- [ ] Card gateway webhooks (secondary payment method)
+- [ ] Courier API providers + webhooks (manual fulfillment already works)
+- [ ] Messaging inbox (WA/IG) — replace workspace open-chats mock
+- [ ] Cloudflare Worker (or equivalent) edge webhook ingestion
+- [ ] Notification center (expiring holds, payment claims, delivery events)
+
+### P3 — AI Agents (deferred by design)
+
+- [ ] Design agent tools (catalog Q&A, create order, send quote/invoice, payment follow-up, handoff)
 - [ ] Provision AI seats by subscription tier
 - [ ] Runtime, memory, audit log, human takeover
 - [ ] Guardrails: tax-free rules, stock holds, payment confirmation policy
 
-### P3 — Polish / depth
+### P4 — Quality
 
-- [x] Order detail mutations (cancel, ship/create delivery) with server state
-- [x] Inventory list + restock (server)
-- [ ] Team invite + permission management (server)
-- [ ] Notification center (expiring holds, proofs, failed delivery)
-- [x] Wire `/track/[token]` UI to `/api/tracking/:token`
-- [ ] Tests (unit for totals engine, e2e for order lifecycle)
-- [ ] Deploy pipeline (frontend host + API + DB)
-
-### Docs / housekeeping
-
-- [x] Align Phase 1 tech plan stack: **Next.js** (not Vite) + optional inventory schema
-- [x] Update this file as work lands (Postgres + deliveries + RLS)
+- [x] Unit tests: totals engine, API client helpers, use-orders hook sample
+- [ ] Broader hook/component tests + order lifecycle e2e
+- [ ] Backend unit/e2e tests for pay claim → verify → ship → track
+- [ ] Keep this file updated as work lands
 
 ---
 
@@ -165,24 +187,41 @@ Also done:
 2. ~~Products / inventory + create order + holds~~  
 3. ~~Deliveries + tracking + RLS~~  
 4. ~~Bank transfer payments (default)~~  
-5. Wire dashboard & orders to API  
-6. Card gateway (optional)  
-7. AI agent design (separate from human Sales Team RBAC)
+5. ~~Frontend API layer + wire core commerce screens~~  
+6. ~~Product CRUD UI + live dashboard charts~~  
+7. ~~Quotes / invoices backend + wire documents~~  
+8. ~~Team invite / RBAC~~  
+9. **Messaging inbox (WA/IG)**  
+10. Card gateway / courier APIs (optional)  
+11. AI agent design (separate from human Sales Team)
 
 ---
 
-## Key code / doc pointers
+## Key code pointers
 
 | Area | Path |
 |------|------|
-| Mock domain data | `frontend/lib/data.ts` |
+| Frontend API layer | `frontend/api/` |
+| Chart analytics helpers | `frontend/api/analytics.ts` |
+| Product form sheet | `frontend/components/dashboard/product-form-sheet.tsx` |
+| Documents API | `backend/src/documents/` |
+| Documents UI hooks | `frontend/api/hooks/use-documents.ts` |
+| Create quote/invoice drawer | `frontend/components/dashboard/create-document-drawer.tsx` |
+| Team invite / roles | `backend/src/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
+| Roles guard | `backend/src/common/guards/roles.guard.ts` |
+| Auth session | `frontend/lib/auth-context.tsx` |
+| Remaining mock domain data | `frontend/lib/data.ts` |
 | VAT + shipping totals | `frontend/lib/pdf/totals.ts` |
 | Nav | `frontend/components/dashboard/nav-items.ts` |
-| Phase 1 API/DB plan | `docs/Phase1_Technical_Build_Plan.md` |
-| Master PRD | `docs/Omnicommerce_Ecosystem_Master_PRD_v2_1.docx` |
+| Public pay UI | `frontend/app/pay/[token]/` |
+| Public track UI | `frontend/app/track/[token]/` |
 | Docker Postgres | `backend/docker-compose.yml` |
 | RLS bootstrap | `backend/src/database/rls.service.ts` |
+| Auth | `backend/src/auth/` |
+| Businesses | `backend/src/businesses/` |
+| Orders | `backend/src/orders/` |
+| Inventory | `backend/src/inventory/` |
+| Payments | `backend/src/payments/` |
 | Deliveries | `backend/src/deliveries/` |
 | Public tracking | `backend/src/tracking/` |
-| Bank transfer payments | `backend/src/payments/` |
-| Customer pay UI | `frontend/app/pay/[token]/` |
+| Local product docs (not in git) | `docs/` |

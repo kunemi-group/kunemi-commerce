@@ -11,7 +11,8 @@ import { useTeam } from "@/api"
 
 export default function TeamPage() {
   const { isAuthenticated } = useAuth()
-  const { data: members = [] } = useTeam(isAuthenticated)
+  const { data } = useTeam(isAuthenticated)
+  const members = data?.members ?? []
   const kpis = useMemo((): Kpi[] => {
     const total = members.length
     const owners = members.filter((m) => m.role === "owner").length

@@ -2,11 +2,11 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InvoicePreview } from "@/components/pdf/document-preview"
 import { DownloadPdfButton } from "@/components/pdf/download-pdf-button"
-import { getInvoice } from "@/lib/data"
+import { getApiErrorMessage, toUiInvoice, useInvoice } from "@/api"
 
 export default function InvoiceDocumentPage({
   params,
@@ -15,14 +15,23 @@ export default function InvoiceDocumentPage({
 }) {
   const { id } = use(params)
   const decoded = decodeURIComponent(id)
-  const invoice = getInvoice(decoded)
+  const { data, isLoading, error } = useInvoice(decoded)
 
-  if (!invoice) {
+  if (isLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center gap-2 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+        Loading invoice…
+      </div>
+    )
+  }
+
+  if (error || !data) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center bg-background px-4 text-center">
         <h1 className="text-lg font-semibold">Invoice not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          No template data for {decoded}.
+          {error ? getApiErrorMessage(error) : `No data for ${decoded}.`}
         </p>
         <Button className="mt-4" variant="outline" render={<Link href="/invoices" />}>
           Back to invoices
@@ -30,6 +39,8 @@ export default function InvoiceDocumentPage({
       </div>
     )
   }
+
+  const invoice = toUiInvoice(data)
 
   return (
     <div className="min-h-svh bg-zinc-950 print:bg-white">

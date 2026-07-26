@@ -32,4 +32,14 @@ export const queryKeys = {
   tracking: {
     public: (token: string) => ["tracking", "public", token] as const,
   },
+  quotations: {
+    all: ["quotations"] as const,
+    list: () => [...queryKeys.quotations.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.quotations.all, "detail", id] as const,
+  },
+  invoices: {
+    all: ["invoices"] as const,
+    list: () => [...queryKeys.invoices.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.invoices.all, "detail", id] as const,
+  },
 }

@@ -6,12 +6,14 @@ import {
   MoreHorizontal,
   MessageCircle,
   Mail,
-  Link2,
   FileText,
   Receipt,
   FileDown,
+  Loader2,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -32,18 +34,26 @@ import {
 import { EmptyState } from "./empty-state"
 import { CopyWhatsApp } from "./copy-whatsapp"
 import { DownloadPdfButton } from "@/components/pdf/download-pdf-button"
-import {
-  quotations,
-  invoices,
-  business,
-  type Quotation,
-  type Invoice,
-  type QuoteStatus,
-  type InvoiceStatus,
-} from "@/lib/data"
+import type { Invoice, Quotation, QuoteStatus, InvoiceStatus } from "@/lib/data"
 import { documentShareMessage } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
-import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
+import {
+  formatNgn,
+  getApiErrorMessage,
+  toUiInvoice,
+  toUiQuotation,
+  useAcceptQuotation,
+  useConvertQuotation,
+  useInvoices,
+  useMarkInvoicePaid,
+  useQuotations,
+  useSendInvoice,
+  useSendQuotation,
+  useVoidInvoice,
+  type ApiInvoice,
+  type ApiQuotation,
+} from "@/api"
 
 const quoteStyles: Record<QuoteStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -76,7 +86,26 @@ function Pill({ className, children }: { className?: string; children: React.Rea
   )
 }
 
+function formatDate(iso: string | null) {
+  if (!iso) return "—"
+  return new Date(iso).toLocaleDateString("en-NG", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
 export function QuotationsTable() {
+  const { isAuthenticated, business } = useAuth()
+  const {
+    data: quotations = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuotations(isAuthenticated)
+  const sendMutation = useSendQuotation()
+  const acceptMutation = useAcceptQuotation()
+  const convertMutation = useConvertQuotation()
   const [filter, setFilter] = useState<"all" | QuoteStatus>("all")
   const [query, setQuery] = useState("")
   const [shareId, setShareId] = useState<string | null>(null)
@@ -87,13 +116,22 @@ export function QuotationsTable() {
       const okStatus = filter === "all" || row.status === filter
       const okQ =
         q === "" ||
-        row.id.toLowerCase().includes(q) ||
-        row.customer.toLowerCase().includes(q)
+        row.reference.toLowerCase().includes(q) ||
+        row.customerName.toLowerCase().includes(q)
       return okStatus && okQ
     })
-  }, [filter, query])
+  }, [filter, query, quotations])
 
   const share = shareId ? quotations.find((x) => x.id === shareId) : null
+  const error = queryError
+    ? getApiErrorMessage(queryError)
+    : sendMutation.error
+      ? getApiErrorMessage(sendMutation.error)
+      : acceptMutation.error
+        ? getApiErrorMessage(acceptMutation.error)
+        : convertMutation.error
+          ? getApiErrorMessage(convertMutation.error)
+          : null
 
   return (
     <>
@@ -113,10 +151,13 @@ export function QuotationsTable() {
         placeholder="Search quote, customer…"
         emptyIcon={FileText}
         emptyTitle="No quotations"
-        emptyDescription="Create a quote from a chat, send via WhatsApp or email with payment options."
+        emptyDescription="Create a quote from chat, send via WhatsApp or email."
         count={rows.length}
         total={quotations.length}
-        footerNote="Quotes can convert to invoices or orders · payment via transfer and/or card"
+        footerNote="Quotes can convert to invoices · bank transfer default"
+        loading={isLoading}
+        error={error}
+        onRefresh={() => void refetch()}
       >
         <Table>
           <TableHeader>
@@ -134,34 +175,42 @@ export function QuotationsTable() {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="pl-4 font-medium tabular-nums">{row.id}</TableCell>
+                <TableCell className="pl-4 font-medium tabular-nums">
+                  {row.reference}
+                </TableCell>
                 <TableCell>
                   <div className="leading-tight">
-                    <span className="block">{row.customer}</span>
-                    <span className="block text-xs text-muted-foreground">{row.owner}</span>
+                    <span className="block">{row.customerName}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {row.ownerName ?? "—"}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="hidden capitalize text-muted-foreground md:table-cell">
                   {row.channel}
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
-                  {row.total}
+                  {formatNgn(row.totalCents)}
                 </TableCell>
                 <TableCell>
                   <Pill className={quoteStyles[row.status]}>{row.status}</Pill>
                 </TableCell>
                 <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
-                  {row.paymentMethods.map((m) => (m === "card" ? "Card" : "Transfer")).join(" · ")}
+                  {row.paymentMethods
+                    .map((m) => (m === "card" ? "Card" : "Transfer"))
+                    .join(" · ")}
                 </TableCell>
                 <TableCell className="hidden text-right text-sm text-muted-foreground xl:table-cell">
-                  {row.validUntil}
+                  {formatDate(row.validUntil)}
                 </TableCell>
                 <TableCell className="pr-4">
-                  <RowMenu
-                    kind="quotation"
-                    docId={row.id}
+                  <QuoteRowMenu
+                    row={row}
                     onWhatsApp={() => setShareId(row.id)}
                     onEmail={() => setShareId(row.id)}
+                    onSend={() => void sendMutation.mutateAsync(row.id)}
+                    onAccept={() => void acceptMutation.mutateAsync(row.id)}
+                    onConvert={() => void convertMutation.mutateAsync(row.id)}
                   />
                 </TableCell>
               </TableRow>
@@ -173,7 +222,9 @@ export function QuotationsTable() {
       {share ? (
         <ShareBar
           kind="quotation"
-          doc={share}
+          docId={share.id}
+          doc={toUiQuotation(share)}
+          businessName={business?.name ?? "Business"}
           onClose={() => setShareId(null)}
         />
       ) : null}
@@ -182,6 +233,16 @@ export function QuotationsTable() {
 }
 
 export function InvoicesTable() {
+  const { isAuthenticated, business } = useAuth()
+  const {
+    data: invoices = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useInvoices(isAuthenticated)
+  const sendMutation = useSendInvoice()
+  const paidMutation = useMarkInvoicePaid()
+  const voidMutation = useVoidInvoice()
   const [filter, setFilter] = useState<"all" | InvoiceStatus>("all")
   const [query, setQuery] = useState("")
   const [shareId, setShareId] = useState<string | null>(null)
@@ -192,13 +253,22 @@ export function InvoicesTable() {
       const okStatus = filter === "all" || row.status === filter
       const okQ =
         q === "" ||
-        row.id.toLowerCase().includes(q) ||
-        row.customer.toLowerCase().includes(q)
+        row.reference.toLowerCase().includes(q) ||
+        row.customerName.toLowerCase().includes(q)
       return okStatus && okQ
     })
-  }, [filter, query])
+  }, [filter, query, invoices])
 
   const share = shareId ? invoices.find((x) => x.id === shareId) : null
+  const error = queryError
+    ? getApiErrorMessage(queryError)
+    : sendMutation.error
+      ? getApiErrorMessage(sendMutation.error)
+      : paidMutation.error
+        ? getApiErrorMessage(paidMutation.error)
+        : voidMutation.error
+          ? getApiErrorMessage(voidMutation.error)
+          : null
 
   return (
     <>
@@ -218,21 +288,20 @@ export function InvoicesTable() {
         placeholder="Search invoice, customer…"
         emptyIcon={Receipt}
         emptyTitle="No invoices"
-        emptyDescription="Invoice from an accepted quote or paid order. Send with card link and/or bank details."
+        emptyDescription="Invoice from an accepted quote or create freeform. Send bank details with WhatsApp."
         count={rows.length}
         total={invoices.length}
-        footerNote={
-          business.payments.preferTransferToAvoidFees
-            ? "Default: bank transfer details first (lower fees) · card optional"
-            : "Card and transfer both available on send"
-        }
+        footerNote="Bank transfer default · mark paid when transfer verified"
+        loading={isLoading}
+        error={error}
+        onRefresh={() => void refetch()}
       >
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-4">Invoice</TableHead>
               <TableHead>Customer</TableHead>
-              <TableHead className="hidden md:table-cell">Linked</TableHead>
+              <TableHead className="hidden md:table-cell">Linked quote</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden lg:table-cell">Pay options</TableHead>
@@ -243,34 +312,42 @@ export function InvoicesTable() {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="pl-4 font-medium tabular-nums">{row.id}</TableCell>
+                <TableCell className="pl-4 font-medium tabular-nums">
+                  {row.reference}
+                </TableCell>
                 <TableCell>
                   <div className="leading-tight">
-                    <span className="block">{row.customer}</span>
-                    <span className="block text-xs text-muted-foreground">{row.owner}</span>
+                    <span className="block">{row.customerName}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {row.ownerName ?? "—"}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
-                  {row.orderId ?? row.quoteId ?? "—"}
+                  {row.quotationId ? row.quotationId.slice(0, 8) : "—"}
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
-                  {row.total}
+                  {formatNgn(row.totalCents)}
                 </TableCell>
                 <TableCell>
                   <Pill className={invoiceStyles[row.status]}>{row.status}</Pill>
                 </TableCell>
                 <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
-                  {row.paymentMethods.map((m) => (m === "card" ? "Card" : "Transfer")).join(" · ")}
+                  {row.paymentMethods
+                    .map((m) => (m === "card" ? "Card" : "Transfer"))
+                    .join(" · ")}
                 </TableCell>
                 <TableCell className="hidden text-right text-sm text-muted-foreground xl:table-cell">
-                  {row.dueDate}
+                  {formatDate(row.dueAt)}
                 </TableCell>
                 <TableCell className="pr-4">
-                  <RowMenu
-                    kind="invoice"
-                    docId={row.id}
+                  <InvoiceRowMenu
+                    row={row}
                     onWhatsApp={() => setShareId(row.id)}
                     onEmail={() => setShareId(row.id)}
+                    onSend={() => void sendMutation.mutateAsync(row.id)}
+                    onPaid={() => void paidMutation.mutateAsync({ id: row.id })}
+                    onVoid={() => void voidMutation.mutateAsync(row.id)}
                   />
                 </TableCell>
               </TableRow>
@@ -280,29 +357,34 @@ export function InvoicesTable() {
       </DocTableShell>
 
       {share ? (
-        <ShareBar kind="invoice" doc={share} onClose={() => setShareId(null)} />
+        <ShareBar
+          kind="invoice"
+          docId={share.id}
+          doc={toUiInvoice(share)}
+          businessName={business?.name ?? "Business"}
+          onClose={() => setShareId(null)}
+        />
       ) : null}
     </>
   )
 }
 
-function RowMenu({
-  kind,
-  docId,
+function QuoteRowMenu({
+  row,
   onWhatsApp,
   onEmail,
+  onSend,
+  onAccept,
+  onConvert,
 }: {
-  kind: "quotation" | "invoice"
-  docId: string
+  row: ApiQuotation
   onWhatsApp: () => void
   onEmail: () => void
+  onSend: () => void
+  onAccept: () => void
+  onConvert: () => void
 }) {
   const router = useRouter()
-  const path =
-    kind === "quotation"
-      ? `/documents/quotation/${encodeURIComponent(docId)}`
-      : `/documents/invoice/${encodeURIComponent(docId)}`
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -313,9 +395,11 @@ function RowMenu({
         <MoreHorizontal className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => router.push(path)}>
+        <DropdownMenuItem
+          onClick={() => router.push(`/documents/quotation/${row.id}`)}
+        >
           <FileDown className="size-4" />
-          Preview / PDF template
+          Preview / PDF
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onWhatsApp}>
           <MessageCircle className="size-4" />
@@ -325,11 +409,71 @@ function RowMenu({
           <Mail className="size-4" />
           Send email
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Link2 className="size-4" />
-          Copy customer link
+        {row.status === "draft" || row.status === "sent" ? (
+          <DropdownMenuItem onClick={onSend}>Mark sent</DropdownMenuItem>
+        ) : null}
+        {row.status === "draft" || row.status === "sent" ? (
+          <DropdownMenuItem onClick={onAccept}>Mark accepted</DropdownMenuItem>
+        ) : null}
+        {row.status !== "converted" && row.status !== "expired" ? (
+          <DropdownMenuItem onClick={onConvert}>Convert to invoice</DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function InvoiceRowMenu({
+  row,
+  onWhatsApp,
+  onEmail,
+  onSend,
+  onPaid,
+  onVoid,
+}: {
+  row: ApiInvoice
+  onWhatsApp: () => void
+  onEmail: () => void
+  onSend: () => void
+  onPaid: () => void
+  onVoid: () => void
+}) {
+  const router = useRouter()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" className="size-8" aria-label="Actions" />
+        }
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => router.push(`/documents/invoice/${row.id}`)}
+        >
+          <FileDown className="size-4" />
+          Preview / PDF
         </DropdownMenuItem>
-        <DropdownMenuItem>Mark paid / convert</DropdownMenuItem>
+        <DropdownMenuItem onClick={onWhatsApp}>
+          <MessageCircle className="size-4" />
+          Send WhatsApp
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onEmail}>
+          <Mail className="size-4" />
+          Send email
+        </DropdownMenuItem>
+        {row.status === "draft" || row.status === "sent" || row.status === "overdue" ? (
+          <DropdownMenuItem onClick={onSend}>Mark sent</DropdownMenuItem>
+        ) : null}
+        {row.status !== "paid" && row.status !== "void" ? (
+          <DropdownMenuItem onClick={onPaid}>Mark paid</DropdownMenuItem>
+        ) : null}
+        {row.status !== "paid" && row.status !== "void" ? (
+          <DropdownMenuItem variant="destructive" onClick={onVoid}>
+            Void
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -337,15 +481,21 @@ function RowMenu({
 
 function ShareBar({
   kind,
+  docId,
   doc,
+  businessName,
   onClose,
 }: {
   kind: "quotation" | "invoice"
+  /** API UUID for deep link */
+  docId: string
   doc: Quotation | Invoice
+  businessName: string
   onClose: () => void
 }) {
-  const link = `https://pay.workspace.kunemi.com/${kind === "quotation" ? "q" : "i"}/${doc.id}`
-  const paymentLink = `https://pay.workspace.kunemi.com/pay/${doc.id}`
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://workspace.kunemi.local"
+  const link = `${origin}/documents/${kind === "quotation" ? "quotation" : "invoice"}/${docId}`
   const includeCard = doc.paymentMethods.includes("card")
   const includeTransfer = doc.paymentMethods.includes("transfer")
 
@@ -357,7 +507,6 @@ function ShareBar({
     link,
     includeCardLink: includeCard,
     includeTransferDetails: includeTransfer,
-    paymentLink,
   })
 
   return (
@@ -368,11 +517,9 @@ function ShareBar({
             Send {doc.id} via WhatsApp / email
           </p>
           <p className="text-xs text-muted-foreground">
-            {includeTransfer && includeCard
-              ? "Includes bank details + card link"
-              : includeTransfer
-                ? "Bank transfer details (avoids card fees)"
-                : "Card payment link"}
+            {includeTransfer
+              ? "Bank transfer details in message"
+              : "Share document preview link"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -394,7 +541,7 @@ function ShareBar({
               render={
                 <a
                   href={`mailto:${doc.email}?subject=${encodeURIComponent(
-                    `${business.name} ${kind} ${doc.id}`,
+                    `${businessName} ${kind} ${doc.id}`,
                   )}&body=${encodeURIComponent(message)}`}
                 />
               }
@@ -426,6 +573,9 @@ function DocTableShell({
   total,
   footerNote,
   children,
+  loading,
+  error,
+  onRefresh,
 }: {
   filter: string
   onFilter: (v: string) => void
@@ -440,25 +590,46 @@ function DocTableShell({
   total: number
   footerNote: string
   children: React.ReactNode
+  loading?: boolean
+  error?: string | null
+  onRefresh?: () => void
 }) {
   return (
     <Card className="gap-0 overflow-hidden p-0">
       <div className="flex flex-col gap-3 border-b border-border p-4">
-        <Tabs value={filter} onValueChange={onFilter}>
-          <div className="-mx-1 overflow-x-auto px-1">
-            <TabsList className="inline-flex w-max gap-1 bg-transparent p-0">
-              {filters.map((f) => (
-                <TabsTrigger
-                  key={f.key}
-                  value={f.key}
-                  className="rounded-md border border-transparent px-3 data-[state=active]:border-border data-[state=active]:bg-secondary"
-                >
-                  {f.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </Tabs>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Tabs value={filter} onValueChange={onFilter}>
+            <div className="-mx-1 overflow-x-auto px-1">
+              <TabsList className="inline-flex w-max gap-1 bg-transparent p-0">
+                {filters.map((f) => (
+                  <TabsTrigger
+                    key={f.key}
+                    value={f.key}
+                    className="rounded-md border border-transparent px-3 data-[state=active]:border-border data-[state=active]:bg-secondary"
+                  >
+                    {f.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+          </Tabs>
+          {onRefresh ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              Refresh
+            </Button>
+          ) : null}
+        </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -469,19 +640,30 @@ function DocTableShell({
             className="h-9 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <p className="text-xs text-muted-foreground">Live from API</p>
       </div>
       <CardContent className="p-0">
-        {count === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Loading…
+          </div>
+        ) : count === 0 ? (
           <div className="p-4">
             <EmptyState
               icon={emptyIcon}
               title={emptyTitle}
               description={emptyDescription}
-              actionLabel="Clear filters"
-              onAction={() => {
-                onFilter("all")
-                onQuery("")
-              }}
+              actionLabel={total > 0 ? "Clear filters" : undefined}
+              onAction={
+                total > 0
+                  ? () => {
+                      onFilter("all")
+                      onQuery("")
+                    }
+                  : undefined
+              }
             />
           </div>
         ) : (

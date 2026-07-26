@@ -12,6 +12,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { DocumentsModule } from './documents/documents.module';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
@@ -26,6 +27,10 @@ import {
   Delivery,
   DeliveryStatusEvent,
   Payment,
+  Quotation,
+  QuotationItem,
+  Invoice,
+  InvoiceItem,
 } from './database/entities';
 import { Public } from './common/decorators/public.decorator';
 import { Controller, Get } from '@nestjs/common';
@@ -68,6 +73,10 @@ class RootController {
           Delivery,
           DeliveryStatusEvent,
           Payment,
+          Quotation,
+          QuotationItem,
+          Invoice,
+          InvoiceItem,
         ];
         const logging = config.get<string>('TYPEORM_LOGGING') === 'true';
         // Prefer Postgres in prod; better-sqlite3 for local dev without Docker
@@ -104,6 +113,7 @@ class RootController {
     PaymentsModule,
     DeliveriesModule,
     TrackingModule,
+    DocumentsModule,
   ],
   controllers: [RootController],
   providers: [

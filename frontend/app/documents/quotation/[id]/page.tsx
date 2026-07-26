@@ -2,11 +2,11 @@
 
 import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuotationPreview } from "@/components/pdf/document-preview"
 import { DownloadPdfButton } from "@/components/pdf/download-pdf-button"
-import { getQuotation } from "@/lib/data"
+import { getApiErrorMessage, toUiQuotation, useQuotation } from "@/api"
 
 export default function QuotationDocumentPage({
   params,
@@ -15,14 +15,23 @@ export default function QuotationDocumentPage({
 }) {
   const { id } = use(params)
   const decoded = decodeURIComponent(id)
-  const quote = getQuotation(decoded)
+  const { data, isLoading, error } = useQuotation(decoded)
 
-  if (!quote) {
+  if (isLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center gap-2 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+        Loading quotation…
+      </div>
+    )
+  }
+
+  if (error || !data) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center bg-background px-4 text-center">
         <h1 className="text-lg font-semibold">Quotation not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          No template data for {decoded}.
+          {error ? getApiErrorMessage(error) : `No data for ${decoded}.`}
         </p>
         <Button className="mt-4" variant="outline" render={<Link href="/quotations" />}>
           Back to quotations
@@ -30,6 +39,8 @@ export default function QuotationDocumentPage({
       </div>
     )
   }
+
+  const quote = toUiQuotation(data)
 
   return (
     <div className="min-h-svh bg-zinc-950 print:bg-white">

@@ -1,11 +1,15 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Plus, Download } from "lucide-react"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { KpiCards } from "@/components/dashboard/kpi-cards"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { InventoryTable } from "@/components/dashboard/inventory-table"
+import {
+  ProductFormSheet,
+  type ProductFormMode,
+} from "@/components/dashboard/product-form-sheet"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import type { Kpi } from "@/lib/data"
@@ -14,6 +18,9 @@ import { flattenInventory, useProducts } from "@/api"
 export default function InventoryPage() {
   const { isAuthenticated } = useAuth()
   const { data: products = [] } = useProducts(isAuthenticated)
+  const [formMode, setFormMode] = useState<ProductFormMode | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+
   const kpis = useMemo((): Kpi[] => {
     const rows = flattenInventory(products)
     const skus = rows.length
@@ -56,6 +63,11 @@ export default function InventoryPage() {
     ]
   }, [products])
 
+  function openCreate() {
+    setFormMode({ type: "create" })
+    setFormOpen(true)
+  }
+
   return (
     <DashboardShell
       title="Inventory"
@@ -71,7 +83,7 @@ export default function InventoryPage() {
                 <Download className="size-4" />
                 Export
               </Button>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={openCreate}>
                 <Plus className="size-4" />
                 Add product
               </Button>
@@ -80,8 +92,14 @@ export default function InventoryPage() {
         />
 
         <KpiCards items={kpis} />
-        <InventoryTable />
+        <InventoryTable onRequestCreate={openCreate} />
       </div>
+
+      <ProductFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode={formMode}
+      />
     </DashboardShell>
   )
 }

@@ -9,6 +9,7 @@ import {
   Loader2,
   RefreshCw,
   Users,
+  Trash2,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -29,17 +30,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EmptyState } from "./empty-state"
+import { InviteMemberSheet } from "./invite-member-sheet"
 import { cn } from "@/lib/utils"
 import { tierLimits, type SubscriptionTier } from "@/lib/data"
 import { useAuth } from "@/lib/auth-context"
-import { relativeTime, useTeam } from "@/api"
+import {
+  getApiErrorMessage,
+  relativeTime,
+  useRemoveMember,
+  useTeam,
+  useUpdateMemberRole,
+  type UserRole,
+} from "@/api"
 
 const roleLabel: Record<string, string> = {
   owner: "Owner",
   manager: "Manager",
   sales: "Sales",
   ops: "Ops",
-  agent: "Sales",
 }
 
 function initials(name: string) {
@@ -52,22 +60,32 @@ function initials(name: string) {
 }
 
 export function TeamBoard() {
-  const { isAuthenticated, business } = useAuth()
+  const { isAuthenticated, business, user } = useAuth()
   const [query, setQuery] = useState("")
+  const [inviteOpen, setInviteOpen] = useState(false)
   const {
-    data: members = [],
+    data,
     isLoading: loading,
     error: queryError,
     refetch,
   } = useTeam(isAuthenticated)
-  const error = queryError
-    ? queryError instanceof Error
-      ? queryError.message
-      : "Failed to load team"
-    : null
+  const members = data?.members ?? []
+  const seats = data?.seats ?? tierLimits[(business?.tier ?? "starter") as SubscriptionTier].teamSeats
+  const updateRole = useUpdateMemberRole()
+  const removeMember = useRemoveMember()
 
-  const tier = (business?.tier ?? "starter") as SubscriptionTier
-  const seats = tierLimits[tier].teamSeats
+  const canManage =
+    user?.role === "owner" || user?.role === "manager"
+
+  const error = queryError
+    ? getApiErrorMessage(queryError)
+    : updateRole.error
+      ? getApiErrorMessage(updateRole.error)
+      : removeMember.error
+        ? getApiErrorMessage(removeMember.error)
+        : null
+
+  const tier = (business?.tier ?? data?.tier ?? "starter") as SubscriptionTier
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -81,6 +99,15 @@ export function TeamBoard() {
   }, [query, members])
 
   const owner = members.find((m) => m.role === "owner") ?? members[0]
+
+  async function setRole(id: string, role: UserRole) {
+    await updateRole.mutateAsync({ id, role })
+  }
+
+  async function remove(id: string, name: string) {
+    if (!window.confirm(`Remove ${name} from this team?`)) return
+    await removeMember.mutateAsync(id)
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-3">
@@ -141,6 +168,11 @@ export function TeamBoard() {
                 <p className="mt-1 text-lg font-semibold">{tierLimits[tier].label}</p>
               </div>
             </div>
+            {!canManage ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Only owners and managers can invite or change roles.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -198,7 +230,19 @@ export function TeamBoard() {
                 className="h-9 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
-            <Button size="sm" className="gap-2" disabled title="Invites coming next">
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!canManage || members.length >= seats}
+              title={
+                !canManage
+                  ? "Owners and managers only"
+                  : members.length >= seats
+                    ? "Seat limit reached"
+                    : "Invite teammate"
+              }
+              onClick={() => setInviteOpen(true)}
+            >
               <UserPlus className="size-4" />
               Invite
             </Button>
@@ -220,7 +264,13 @@ export function TeamBoard() {
               <EmptyState
                 icon={Users}
                 title="No team members"
-                description="Owner is created at registration. Invites come next."
+                description={
+                  canManage
+                    ? "Invite sales, ops, or managers. Seat limits follow your plan."
+                    : "Ask an owner or manager to invite you."
+                }
+                actionLabel={canManage ? "Invite" : undefined}
+                onAction={canManage ? () => setInviteOpen(true) : undefined}
               />
             </div>
           ) : (
@@ -235,59 +285,151 @@ export function TeamBoard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="pl-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-9">
-                            <AvatarFallback className="bg-secondary text-xs font-medium">
-                              {initials(member.fullName)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="leading-tight">
-                            <span className="block font-medium">{member.fullName}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {member.email}
-                            </span>
+                  {rows.map((member) => {
+                    const isSelf = member.id === user?.id
+                    const busy =
+                      updateRole.isPending || removeMember.isPending
+                    return (
+                      <TableRow key={member.id}>
+                        <TableCell className="pl-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="size-9">
+                              <AvatarFallback className="bg-secondary text-xs font-medium">
+                                {initials(member.fullName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="leading-tight">
+                              <span className="block font-medium">
+                                {member.fullName}
+                                {isSelf ? (
+                                  <span className="ml-1 text-xs text-muted-foreground">
+                                    (you)
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                {member.email}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge variant="secondary">
-                          {roleLabel[member.role] ?? member.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden text-right text-sm text-muted-foreground md:table-cell">
-                        {relativeTime(member.createdAt)}
-                      </TableCell>
-                      <TableCell className="pr-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-8"
-                                aria-label={`Actions for ${member.fullName}`}
-                              />
-                            }
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              member.role === "owner" && "bg-primary/15 text-primary",
+                            )}
                           >
-                            <MoreHorizontal className="size-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem disabled>Edit role (soon)</DropdownMenuItem>
-                            <DropdownMenuItem disabled>Message member</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            {roleLabel[member.role] ?? member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-right text-sm text-muted-foreground md:table-cell">
+                          {relativeTime(member.createdAt)}
+                        </TableCell>
+                        <TableCell className="pr-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  aria-label={`Actions for ${member.fullName}`}
+                                  disabled={!canManage || busy}
+                                />
+                              }
+                            >
+                              {busy ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <MoreHorizontal className="size-4" />
+                              )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {user?.role === "owner" && !isSelf ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void setRole(member.id, "owner")
+                                    }
+                                  >
+                                    Make owner
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void setRole(member.id, "manager")
+                                    }
+                                  >
+                                    Make manager
+                                  </DropdownMenuItem>
+                                </>
+                              ) : null}
+                              {canManage && !isSelf && member.role !== "owner" ? (
+                                <>
+                                  {(user?.role === "owner" ||
+                                    member.role !== "manager") && (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          void setRole(member.id, "sales")
+                                        }
+                                      >
+                                        Make sales
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          void setRole(member.id, "ops")
+                                        }
+                                      >
+                                        Make ops
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {user?.role === "owner" &&
+                                  member.role === "manager" ? (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void setRole(member.id, "sales")
+                                      }
+                                    >
+                                      Demote to sales
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() =>
+                                      void remove(member.id, member.fullName)
+                                    }
+                                  >
+                                    <Trash2 className="size-4" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                </>
+                              ) : null}
+                              {isSelf ? (
+                                <DropdownMenuItem disabled>
+                                  You cannot edit yourself here
+                                </DropdownMenuItem>
+                              ) : null}
+                              {!canManage ? (
+                                <DropdownMenuItem disabled>
+                                  View only
+                                </DropdownMenuItem>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <InviteMemberSheet open={inviteOpen} onOpenChange={setInviteOpen} />
     </div>
   )
 }

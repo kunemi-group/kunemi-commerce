@@ -106,11 +106,13 @@ export type ApiDelivery = {
   }>
 }
 
+export type UserRole = "owner" | "manager" | "sales" | "ops"
+
 export type ApiTeamMember = {
   id: string
   email: string
   fullName: string
-  role: string
+  role: UserRole | string
   createdAt: string
 }
 
@@ -262,6 +264,98 @@ export type CreateOrderPayload = {
     description?: string
     quantity: number
     unitPriceCents?: number
+    taxExempt?: boolean
+  }>
+}
+
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "expired"
+  | "converted"
+
+export type InvoiceStatus =
+  | "draft"
+  | "sent"
+  | "partial"
+  | "paid"
+  | "overdue"
+  | "void"
+
+export type DocumentLine = {
+  id: string
+  variantId: string | null
+  description: string
+  quantity: number
+  unitPriceCents: number
+  taxExempt: boolean
+}
+
+export type ApiQuotation = {
+  id: string
+  reference: string
+  status: QuoteStatus
+  customerName: string
+  customerPhone: string | null
+  customerEmail: string | null
+  deliveryAddress: string | null
+  validUntil: string | null
+  channel: string
+  paymentMethods: Array<"transfer" | "card">
+  shippingFeeCents: number
+  taxCents: number
+  subtotalCents: number
+  totalCents: number
+  notes: string | null
+  convertedInvoiceId: string | null
+  ownerName: string | null
+  items: DocumentLine[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type ApiInvoice = {
+  id: string
+  reference: string
+  status: InvoiceStatus
+  customerName: string
+  customerPhone: string | null
+  customerEmail: string | null
+  deliveryAddress: string | null
+  dueAt: string | null
+  channel: string
+  paymentMethods: Array<"transfer" | "card">
+  shippingFeeCents: number
+  taxCents: number
+  subtotalCents: number
+  totalCents: number
+  amountPaidCents: number
+  quotationId: string | null
+  orderId: string | null
+  notes: string | null
+  ownerName: string | null
+  items: DocumentLine[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type CreateDocumentPayload = {
+  customerName: string
+  customerPhone?: string
+  customerEmail?: string
+  deliveryAddress?: string
+  shippingFeeCents?: number
+  notes?: string
+  channel?: "whatsapp" | "email" | "both"
+  paymentMethods?: Array<"transfer" | "card">
+  validUntil?: string
+  dueAt?: string
+  items: Array<{
+    variantId?: string
+    description: string
+    quantity: number
+    unitPriceCents: number
     taxExempt?: boolean
   }>
 }
