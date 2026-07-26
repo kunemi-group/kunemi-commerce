@@ -24,6 +24,6 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`ShopFlow API listening on http://localhost:${port}/api`);
+  console.log(`Kunemi Workspace API listening on http://localhost:${port}/api`);
 }
 void bootstrap();

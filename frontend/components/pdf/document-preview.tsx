@@ -470,7 +470,7 @@ function Notes({ text }: { text: string }) {
 function Footer({ id }: { id: string }) {
   return (
     <footer className="mt-10 border-t border-slate-200 pt-4 text-[10px] text-slate-400">
-      {business.name} · {id} · Generated with ShopFlow
+      {business.name} · {id} · Generated with Kunemi Workspace
     </footer>
   )
 }

@@ -4,13 +4,13 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
-describe('ShopFlow API (e2e)', () => {
+describe('Kunemi Workspace API (e2e)', () => {
   let app: INestApplication<App>;
   let token: string;
 
   beforeAll(async () => {
     process.env.DATABASE_TYPE = 'sqlite';
-    process.env.SQLITE_PATH = 'shopflow.e2e.sqlite';
+    process.env.SQLITE_PATH = 'kunemi-workspace.e2e.sqlite';
     process.env.SEED_ON_BOOT = 'true';
     process.env.JWT_SECRET = 'e2e-secret';
 

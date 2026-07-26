@@ -10,7 +10,7 @@ export default function DeliveriesPage() {
   return (
     <DashboardShell
       title="Deliveries"
-      subtitle="Ship when the address is right — manual or API courier, one ShopFlow tracking link."
+      subtitle="Ship when the address is right — manual or API courier, one Kunemi Workspace tracking link."
     >
       <div className="flex flex-col gap-4 md:gap-6">
         <PageHeader

@@ -209,7 +209,7 @@ export function DeliveriesTable() {
                             Open tracking page
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => copyToken(d.trackingToken)}>
-                            Copy ShopFlow link
+                            Copy tracking link
                           </DropdownMenuItem>
                           {d.externalTrackingUrl ? (
                             <DropdownMenuItem
@@ -241,7 +241,7 @@ export function DeliveriesTable() {
           <span className="tabular-nums">{deliveries.length}</span> deliveries
         </span>
         <p className="hidden text-xs md:block">
-          Customers always get a ShopFlow tracking link — courier links are optional extras
+          Customers always get a Kunemi Workspace tracking link — courier links are optional extras
         </p>
       </CardFooter>
     </Card>

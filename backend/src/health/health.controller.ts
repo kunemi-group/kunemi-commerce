@@ -8,7 +8,7 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
-      service: 'shopflow-api',
+      service: 'kunemi-workspace-api',
       timestamp: new Date().toISOString(),
     };
   }

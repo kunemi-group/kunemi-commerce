@@ -11,9 +11,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'ShopFlow — Social Commerce OS',
+  title: 'Kunemi Workspace',
   description:
-    'Social commerce OS: sales team, AI agents, quotes, invoices, inventory, payments, and deliveries.',
+    'Kunemi Commerce — social selling workspace: orders, team, bank transfer, deliveries, and tracking.',
   generator: 'v0.app',
   icons: {
     icon: [

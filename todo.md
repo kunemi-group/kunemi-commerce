@@ -1,4 +1,4 @@
-# ShopFlow — Project status & todo
+# Kunemi Workspace — Project status & todo
 
 **Last updated:** 2026-07-17  
 

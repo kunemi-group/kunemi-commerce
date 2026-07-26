@@ -344,8 +344,8 @@ function ShareBar({
   doc: Quotation | Invoice
   onClose: () => void
 }) {
-  const link = `https://pay.shopflow.app/${kind === "quotation" ? "q" : "i"}/${doc.id}`
-  const paymentLink = `https://pay.shopflow.app/pay/${doc.id}`
+  const link = `https://pay.workspace.kunemi.com/${kind === "quotation" ? "q" : "i"}/${doc.id}`
+  const paymentLink = `https://pay.workspace.kunemi.com/pay/${doc.id}`
   const includeCard = doc.paymentMethods.includes("card")
   const includeTransfer = doc.paymentMethods.includes("transfer")
 

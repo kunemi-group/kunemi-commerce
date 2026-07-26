@@ -36,7 +36,7 @@ class RootController {
   @Get()
   root() {
     return {
-      service: 'shopflow-api',
+      service: 'kunemi-workspace-api',
       docs: '/api/health',
       auth: ['POST /api/auth/register', 'POST /api/auth/login'],
       payments: [
@@ -85,9 +85,9 @@ class RootController {
           type: 'postgres',
           host: config.get<string>('DATABASE_HOST', 'localhost'),
           port: Number(config.get<string>('DATABASE_PORT', '5432')),
-          username: config.get<string>('DATABASE_USER', 'shopflow'),
-          password: config.get<string>('DATABASE_PASSWORD', 'shopflow'),
-          database: config.get<string>('DATABASE_NAME', 'shopflow'),
+          username: config.get<string>('DATABASE_USER', 'Kunemi Workspace'),
+          password: config.get<string>('DATABASE_PASSWORD', 'Kunemi Workspace'),
+          database: config.get<string>('DATABASE_NAME', 'Kunemi Workspace'),
           entities,
           synchronize: true, // dev only — switch to migrations for prod
           logging,

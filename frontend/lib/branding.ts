@@ -18,7 +18,7 @@ export const defaultBranding: BrandingState = {
   defaultShippingFeeNaira: business.shipping.defaultFeeNaira,
 }
 
-export const BRANDING_STORAGE_KEY = "shopflow-branding"
+export const BRANDING_STORAGE_KEY = "kunemi-workspace-branding"
 
 /** Soft background from brand hex (for pills / surfaces) */
 export function brandSoft(hex: string, alpha = 0.12): string {

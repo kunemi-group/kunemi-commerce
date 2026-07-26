@@ -57,7 +57,7 @@ export function PaymentProofDialog({
   }
 
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("shopflow_token") : null
+    typeof window !== "undefined" ? localStorage.getItem("kunemi_workspace_token") : null
   const proofSrc = ext?._proofUrl
     ? ext._proofUrl.includes("?")
       ? ext._proofUrl

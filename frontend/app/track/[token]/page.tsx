@@ -32,7 +32,7 @@ export default async function TrackingPage({
         <h1 className="text-xl font-semibold tracking-tight">Tracking link not found</h1>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
           This token may have expired or been typed incorrectly. Ask your seller for a fresh
-          ShopFlow link.
+          tracking link.
         </p>
         <Button
           className="mt-6 gap-2"
@@ -74,7 +74,7 @@ export default async function TrackingPage({
             <div className="leading-tight">
               <p className="text-sm font-semibold tracking-tight">{data.businessName}</p>
               <p className="text-xs text-muted-foreground">
-                Order tracking · Powered by ShopFlow
+                Order tracking · Powered by Kunemi Workspace
               </p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default async function TrackingPage({
         <p className="pb-6 text-center text-[11px] text-muted-foreground">
           Sold with{" "}
           <Link href="/" className="text-primary hover:underline">
-            ShopFlow
+            Kunemi Workspace
           </Link>
         </p>
       </main>

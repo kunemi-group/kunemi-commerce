@@ -106,8 +106,8 @@ export default function LoginPage() {
           <Boxes className="size-5" />
         </div>
         <div className="leading-tight">
-          <p className="font-semibold tracking-tight">ShopFlow</p>
-          <p className="text-xs text-muted-foreground">Social commerce OS</p>
+          <p className="font-semibold tracking-tight">Kunemi Workspace</p>
+          <p className="text-xs text-muted-foreground">Kunemi Commerce · Workspace</p>
         </div>
       </div>
       <Suspense

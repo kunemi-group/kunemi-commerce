@@ -243,7 +243,7 @@ export function PayPageClient({ token }: { token: string }) {
           <div className="leading-tight">
             <p className="text-sm font-semibold tracking-tight">{data.business.name}</p>
             <p className="text-xs text-muted-foreground">
-              Bank transfer · Powered by ShopFlow
+              Bank transfer · Powered by Kunemi Workspace
             </p>
           </div>
         </div>

@@ -10,7 +10,7 @@ import {
 } from "react"
 import { apiGet, apiSend } from "@/lib/api"
 
-const TOKEN_KEY = "shopflow_token"
+const TOKEN_KEY = "kunemi_workspace_token"
 
 export type AuthUser = {
   id: string

@@ -1,4 +1,4 @@
-// Mock data modeling the ShopFlow B2B commerce domain (Phase 1 PRD)
+// Mock data modeling the Kunemi Workspace B2B commerce domain (Phase 1 PRD)
 // All figures are illustrative and meant to be replaced by real API responses.
 
 export type SubscriptionTier = "starter" | "growth" | "scale"
@@ -279,7 +279,7 @@ export interface AiAgent {
 export const aiAgents: AiAgent[] = [
   {
     id: "ai_1",
-    name: "ShopFlow Closer",
+    name: "Kunemi Closer",
     status: "active",
     focus: "WhatsApp order capture · payment follow-ups · stock holds",
     ordersHandled: 412,
@@ -1131,7 +1131,7 @@ export function getOrderDetail(orderId: string): OrderDetail | null {
     phone: base.phone ?? "+2348000000000",
     email: base.email,
     address: delivery?.destination ?? "12 Allen Ave, Ikeja, Lagos",
-    paymentLink: `https://pay.shopflow.app/o/${orderId.replace("#", "")}`,
+    paymentLink: `https://pay.workspace.kunemi.com/o/${orderId.replace("#", "")}`,
     trackingToken: delivery?.trackingToken,
     lineItems: defaultLines.slice(0, Math.min(base.items, 2)).map((line, i) =>
       i === 0 ? { ...line, qty: Math.max(1, base.items - 1) } : line,

@@ -1,6 +1,6 @@
-# ShopFlow API (NestJS)
+# Kunemi Workspace API (NestJS)
 
-Backend for the ShopFlow social commerce OS.
+Backend for **Kunemi Workspace** (Kunemi Commerce).
 
 ## Stack
 
@@ -31,7 +31,7 @@ npm run start:dev
 
 - Health: http://localhost:3001/api/health  
 - Seeded user: `owner@lagosthreads.co` / `password123`  
-- Postgres: `localhost:5432` / user `shopflow` / password `shopflow` / db `shopflow`
+- Postgres: `localhost:5432` / user `shopflow` / password `shopflow` / db `shopflow` (Docker service name; product is Kunemi Workspace)
 
 On boot the API:
 

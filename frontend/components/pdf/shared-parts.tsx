@@ -285,7 +285,7 @@ export function PdfFooter({ styles, docId }: { styles: PdfStyles; docId: string 
   return (
     <View style={styles.footer} fixed>
       <Text style={styles.footerText}>
-        {business.name} · {docId} · Generated with ShopFlow
+        {business.name} · {docId} · Generated with Kunemi Workspace
       </Text>
       <Text
         style={styles.footerText}

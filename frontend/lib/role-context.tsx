@@ -26,7 +26,7 @@ type RoleContextValue = {
 
 const RoleContext = createContext<RoleContextValue | null>(null)
 
-const STORAGE_KEY = "shopflow-role"
+const STORAGE_KEY = "kunemi-workspace-role"
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState<AppRole>("owner")

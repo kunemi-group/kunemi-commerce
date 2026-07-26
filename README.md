@@ -1,6 +1,10 @@
-# ShopFlow — Social Commerce OS
+# Kunemi Workspace
 
-Multi-tenant ops platform for businesses that sell over WhatsApp / Instagram: orders, optional inventory, payments (card + transfer), quotes/invoices (PDF), deliveries, sales team, and (later) AI agents.
+**Kunemi Commerce** product — social selling desk for teams that close orders on WhatsApp / Instagram.
+
+Multi-tenant ops: orders, optional inventory, bank-transfer payments (default), quotes/invoices (PDF), deliveries, sales team, and (later) AI agents.
+
+> **Not ShopFlow** — that name is reserved for a different Kunemi product.
 
 ## Monorepo
 

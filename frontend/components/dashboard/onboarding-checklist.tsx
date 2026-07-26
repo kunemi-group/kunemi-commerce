@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
 
-const DISMISS_KEY = "shopflow-onboarding-dismissed"
+const DISMISS_KEY = "kunemi-workspace-onboarding-dismissed"
 
 export function OnboardingChecklist() {
   const { business, onboardingComplete } = useAuth()
@@ -85,7 +85,7 @@ export function OnboardingChecklist() {
         <div>
           <CardTitle className="flex items-center gap-2 text-base">
             <Rocket className="size-4 text-primary" />
-            Get ShopFlow running
+            Get Kunemi Workspace running
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             {doneCount} of {steps.length} next steps · {pct}%

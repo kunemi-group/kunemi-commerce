@@ -81,7 +81,7 @@ export function OrderDetailSheet({
   }, [open, orderId, load])
 
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://app.shopflow.local"
+    typeof window !== "undefined" ? window.location.origin : "https://workspace.kunemi.local"
   const trackingToken = order?.delivery?.trackingToken
   const trackingUrl = trackingToken ? `${origin}/track/${trackingToken}` : null
   const payUrl = order?.payment?.paymentUrl ?? null
