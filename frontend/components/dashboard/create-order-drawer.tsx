@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Check, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
+import { Check, Loader2, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -22,15 +22,13 @@ import { computeDocTotals } from "@/lib/pdf/totals"
 import { formatMoney, parseMoney } from "@/lib/pdf/money"
 import type { QuoteLine } from "@/lib/data"
 import {
-  apiGet,
-  apiSend,
   flattenInventory,
   formatNgn,
+  getApiErrorMessage,
   shortId,
-  type ApiOrder,
-  type ApiProduct,
-} from "@/lib/api"
-import { Loader2 } from "lucide-react"
+  useCreateOrder,
+  useProducts,
+} from "@/api"
 
 type Step = 1 | 2 | 3
 type LineSource = "catalog" | "custom"
@@ -61,15 +59,16 @@ export function CreateOrderDrawer({
   onCreated?: () => void
 }) {
   const branding = useBranding()
-  const { token, business } = useAuth()
-  const [inventory, setInventory] = useState<ReturnType<typeof flattenInventory>>([])
+  const { isAuthenticated, business } = useAuth()
+  const { data: products = [] } = useProducts(open && isAuthenticated)
+  const createOrder = useCreateOrder()
+  const inventory = useMemo(() => flattenInventory(products), [products])
   const hasCatalog = inventory.length > 0
   const [step, setStep] = useState<Step>(1)
   const [customer, setCustomer] = useState(presetCustomer ?? "")
   const [phone, setPhone] = useState(presetPhone ?? "")
   const [email, setEmail] = useState("")
   const [address, setAddress] = useState("")
-  const [payment, setPayment] = useState<"card" | "manual_transfer">("manual_transfer")
   const [shippingFee, setShippingFee] = useState(
     String(
       business
@@ -86,28 +85,27 @@ export function CreateOrderDrawer({
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [createdTotal, setCreatedTotal] = useState("—")
   const [paymentLink, setPaymentLink] = useState("")
-  const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open || !token) return
-    void (async () => {
-      try {
-        const res = await apiGet<{ products: ApiProduct[] }>("/products", token)
-        const flat = flattenInventory(res.products ?? [])
-        setInventory(flat)
-        setLineSource(flat.length > 0 ? "catalog" : "custom")
-        const defaults: Record<string, boolean> = {}
-        for (const item of flat) {
-          if (item.taxExempt) defaults[item.id] = true
+    if (!open) return
+    setLineSource(hasCatalog ? "catalog" : "custom")
+  }, [open, hasCatalog])
+
+  useEffect(() => {
+    if (!open || inventory.length === 0) return
+    setTaxFree((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const item of inventory) {
+        if (item.taxExempt && next[item.id] === undefined) {
+          next[item.id] = true
+          changed = true
         }
-        setTaxFree(defaults)
-      } catch {
-        setInventory([])
-        setLineSource("custom")
       }
-    })()
-  }, [open, token])
+      return changed ? next : prev
+    })
+  }, [open, inventory])
 
   useEffect(() => {
     if (open) {
@@ -117,7 +115,6 @@ export function CreateOrderDrawer({
         ? Math.round(business.shipping.defaultFeeCents / 100)
         : branding.defaultShippingFeeNaira
       setShippingFee(String(shipNaira))
-      setPayment("manual_transfer")
     }
   }, [open, presetCustomer, presetPhone, branding.defaultShippingFeeNaira, business])
 
@@ -176,12 +173,11 @@ export function CreateOrderDrawer({
     setCreatedTotal("—")
     setPaymentLink("")
     setSubmitError(null)
-    setSubmitting(false)
+    createOrder.reset()
     if (!presetCustomer) setCustomer("")
     if (!presetPhone) setPhone("")
     setEmail("")
     setAddress("")
-    setPayment("manual_transfer")
     const shipNaira = business
       ? Math.round(business.shipping.defaultFeeCents / 100)
       : branding.defaultShippingFeeNaira
@@ -196,7 +192,7 @@ export function CreateOrderDrawer({
   }
 
   async function submit() {
-    if (!token) {
+    if (!isAuthenticated) {
       setSubmitError("Sign in required")
       return
     }
@@ -204,7 +200,6 @@ export function CreateOrderDrawer({
       setSubmitError("Customer name and phone are required")
       return
     }
-    setSubmitting(true)
     setSubmitError(null)
     try {
       const items =
@@ -234,7 +229,6 @@ export function CreateOrderDrawer({
 
       if (!items.length) {
         setSubmitError("Add at least one line item")
-        setSubmitting(false)
         return
       }
 
@@ -242,35 +236,26 @@ export function CreateOrderDrawer({
         (parseMoney(shippingFee) || Number(shippingFee) || 0) * 100,
       )
 
-      const created = await apiSend<ApiOrder & { paymentLink?: string }>(
-        "/orders",
-        "POST",
-        {
-          customerName: customer.trim(),
-          customerPhone: phone.trim(),
-          customerEmail: email.trim() || undefined,
-          deliveryAddress: address.trim() || undefined,
-          shippingFeeCents: shipCents,
-          items,
-        },
-        token,
-      )
+      const created = await createOrder.mutateAsync({
+        customerName: customer.trim(),
+        customerPhone: phone.trim(),
+        customerEmail: email.trim() || undefined,
+        deliveryAddress: address.trim() || undefined,
+        shippingFeeCents: shipCents,
+        items,
+      })
 
       setCreatedId(shortId(created.id))
       setCreatedTotal(formatNgn(created.totalCents))
-      setPaymentLink(
-        created.paymentLink ||
-          (created as { payment?: { paymentUrl?: string } }).payment?.paymentUrl ||
-          "",
-      )
+      setPaymentLink(created.paymentLink || created.payment?.paymentUrl || "")
       setStep(3)
       onCreated?.()
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Could not create order")
-    } finally {
-      setSubmitting(false)
+      setSubmitError(getApiErrorMessage(e) || "Could not create order")
     }
   }
+
+  const submitting = createOrder.isPending
 
   const usedCatalog = lineSource === "catalog" && catalogLines.length > 0
 

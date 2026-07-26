@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   CreditCard,
   Banknote,
@@ -34,14 +34,14 @@ import { EmptyState } from "./empty-state"
 import type { OrderStatus } from "@/lib/data"
 import { useAuth } from "@/lib/auth-context"
 import {
-  apiGet,
-  apiSend,
   formatNgn,
   minutesLeft,
   relativeTime,
   shortId,
+  useCancelOrder,
+  useOrders,
   type ApiOrder,
-} from "@/lib/api"
+} from "@/api"
 
 type FilterKey = "all" | OrderStatus
 
@@ -57,35 +57,30 @@ const filters: { key: FilterKey; label: string }[] = [
 ]
 
 export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
-  const { token, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [active, setActive] = useState<FilterKey>("all")
   const [query, setQuery] = useState("")
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [orders, setOrders] = useState<ApiOrder[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    if (!token) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await apiGet<{ orders: ApiOrder[] }>("/orders", token)
-      setOrders(res.orders ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load orders")
-      setOrders([])
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
+  const {
+    data: orders = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useOrders(isAuthenticated)
+  const cancelMutation = useCancelOrder()
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : "Failed to load orders"
+    : cancelMutation.error
+      ? cancelMutation.error instanceof Error
+        ? cancelMutation.error.message
+        : "Cancel failed"
+      : null
 
   useEffect(() => {
-    if (isAuthenticated) void load()
-  }, [load, isAuthenticated, refreshKey])
+    if (refreshKey > 0) void refetch()
+  }, [refreshKey, refetch])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -102,13 +97,7 @@ export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
   }, [active, query, orders])
 
   async function cancelOrder(id: string) {
-    if (!token) return
-    try {
-      await apiSend(`/orders/${id}/cancel`, "PATCH", {}, token)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Cancel failed")
-    }
+    await cancelMutation.mutateAsync(id)
   }
 
   async function copyPayLink(o: ApiOrder) {
@@ -149,7 +138,7 @@ export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
               size="sm"
               variant="outline"
               className="gap-1.5"
-              onClick={() => void load()}
+              onClick={() => void refetch()}
               disabled={loading}
             >
               {loading ? (
@@ -313,7 +302,7 @@ export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
         orderId={detailId}
         open={!!detailId}
         onOpenChange={(o) => !o && setDetailId(null)}
-        onChanged={() => void load()}
+        onChanged={() => void refetch()}
       />
     </>
   )

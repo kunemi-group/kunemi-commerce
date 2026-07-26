@@ -42,7 +42,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 export function brandInitials(name: string = business.name): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return "SF"
+  if (parts.length === 0) return "KW"
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }

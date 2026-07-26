@@ -8,56 +8,19 @@ import {
   useMemo,
   useState,
 } from "react"
-import { apiGet, apiSend } from "@/lib/api"
-
-const TOKEN_KEY = "kunemi_workspace_token"
-
-export type AuthUser = {
-  id: string
-  email: string
-  fullName: string
-  role: string
-  businessId: string
-}
-
-export type BusinessProfile = {
-  id: string
-  name: string
-  whatsappNumber: string | null
-  email: string | null
-  address: string | null
-  tier: string
-  tax: {
-    enabled: boolean
-    ratePercent: number
-    label: string
-  }
-  shipping: {
-    defaultFeeCents: number
-  }
-  bank: {
-    bankName: string | null
-    accountName: string | null
-    accountNumber: string | null
-  }
-  brandColor: string
-  onboarding?: {
-    complete: boolean
-    missing: string[]
-    required: string[]
-  }
-  inventoryOptional?: boolean
-}
-
-type AuthMeResponse = {
-  user: AuthUser
-  business: BusinessProfile
-}
-
-type TokenResponse = {
-  accessToken: string
-  user: AuthUser
-}
+import { useQueryClient } from "@tanstack/react-query"
+import {
+  fetchMe,
+  loginRequest,
+  logoutLocal,
+  registerRequest,
+  updateBusinessRequest,
+  getStoredToken,
+  setStoredToken,
+  queryKeys,
+  type AuthUser,
+  type BusinessProfile,
+} from "@/api"
 
 type AuthContextValue = {
   token: string | null
@@ -85,27 +48,26 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+export type { AuthUser, BusinessProfile }
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
   const [token, setToken] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   const applySession = useCallback(async (accessToken: string) => {
-    const me = await apiGet<AuthMeResponse>("/auth/me", accessToken)
+    setStoredToken(accessToken)
+    const me = await fetchMe()
     setToken(accessToken)
     setUser(me.user)
     setBusiness(me.business)
-    try {
-      localStorage.setItem(TOKEN_KEY, accessToken)
-    } catch {
-      /* ignore */
-    }
-  }, [])
+    queryClient.setQueryData(queryKeys.me, me)
+  }, [queryClient])
 
   const refresh = useCallback(async () => {
-    const stored =
-      typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null
+    const stored = getStoredToken()
     if (!stored) {
       setToken(null)
       setUser(null)
@@ -116,18 +78,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await applySession(stored)
     } catch {
-      try {
-        localStorage.removeItem(TOKEN_KEY)
-      } catch {
-        /* ignore */
-      }
+      logoutLocal()
       setToken(null)
       setUser(null)
       setBusiness(null)
+      queryClient.clear()
     } finally {
       setLoading(false)
     }
-  }, [applySession])
+  }, [applySession, queryClient])
 
   useEffect(() => {
     void refresh()
@@ -137,25 +96,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       setLoading(true)
       try {
-        const res = await apiSend<TokenResponse>("/auth/login", "POST", {
-          email,
-          password,
-        })
-        const me = await apiGet<AuthMeResponse>("/auth/me", res.accessToken)
-        setToken(res.accessToken)
-        setUser(me.user)
-        setBusiness(me.business)
-        try {
-          localStorage.setItem(TOKEN_KEY, res.accessToken)
-        } catch {
-          /* ignore */
-        }
+        const res = await loginRequest(email, password)
+        await applySession(res.accessToken)
+        const me = await fetchMe()
         return { onboardingComplete: Boolean(me.business.onboarding?.complete) }
       } finally {
         setLoading(false)
       }
     },
-    [],
+    [applySession],
   )
 
   const register = useCallback(
@@ -168,48 +117,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }) => {
       setLoading(true)
       try {
-        const res = await apiSend<TokenResponse>("/auth/register", "POST", input)
-        const me = await apiGet<AuthMeResponse>("/auth/me", res.accessToken)
-        setToken(res.accessToken)
-        setUser(me.user)
-        setBusiness(me.business)
-        try {
-          localStorage.setItem(TOKEN_KEY, res.accessToken)
-        } catch {
-          /* ignore */
-        }
+        const res = await registerRequest(input)
+        await applySession(res.accessToken)
+        const me = await fetchMe()
         return { onboardingComplete: Boolean(me.business.onboarding?.complete) }
       } finally {
         setLoading(false)
       }
     },
-    [],
+    [applySession],
   )
 
   const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(TOKEN_KEY)
-    } catch {
-      /* ignore */
-    }
+    logoutLocal()
     setToken(null)
     setUser(null)
     setBusiness(null)
-  }, [])
+    queryClient.clear()
+  }, [queryClient])
 
   const updateBusiness = useCallback(
     async (patch: Record<string, unknown>) => {
-      if (!token) throw new Error("Not signed in")
-      const updated = await apiSend<BusinessProfile>(
-        "/businesses/me",
-        "PATCH",
-        patch,
-        token,
-      )
+      if (!getStoredToken()) throw new Error("Not signed in")
+      const updated = await updateBusinessRequest(patch)
       setBusiness(updated)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.business })
       return updated
     },
-    [token],
+    [queryClient],
   )
 
   const value = useMemo<AuthContextValue>(
@@ -225,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refresh,
       updateBusiness,
-      getToken: () => token,
+      getToken: () => token ?? getStoredToken(),
     }),
     [
       token,

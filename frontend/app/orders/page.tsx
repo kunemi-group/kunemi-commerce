@@ -8,7 +8,6 @@ import { OrderStatusChart } from "@/components/dashboard/order-status-chart"
 import { OrdersTable } from "@/components/dashboard/orders-table"
 import { CreateOrderDrawer } from "@/components/dashboard/create-order-drawer"
 import { Button } from "@/components/ui/button"
-import { orderKpis } from "@/lib/data"
 
 export default function OrdersPage() {
   const [createOpen, setCreateOpen] = useState(false)
@@ -35,7 +34,7 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <KpiCards items={orderKpis} />
+        <KpiCards />
 
         <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">

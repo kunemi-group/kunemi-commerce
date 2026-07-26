@@ -1,6 +1,5 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import {
   Banknote,
@@ -30,16 +29,16 @@ import {
   transferInstructionsMessage,
 } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/lib/auth-context"
 import {
-  apiGet,
-  apiSend,
   formatNgn,
+  getApiErrorMessage,
   minutesLeft,
   relativeTime,
   shortId,
-  type ApiOrder,
-} from "@/lib/api"
+  useCancelOrder,
+  useCreateDelivery,
+  useOrder,
+} from "@/api"
 
 export function OrderDetailSheet({
   orderId,
@@ -52,33 +51,24 @@ export function OrderDetailSheet({
   onOpenChange: (open: boolean) => void
   onChanged?: () => void
 }) {
-  const { token } = useAuth()
-  const [order, setOrder] = useState<ApiOrder | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const {
+    data: order,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useOrder(orderId, open && Boolean(orderId))
+  const cancelMutation = useCancelOrder()
+  const shipMutation = useCreateDelivery()
 
-  const load = useCallback(async () => {
-    if (!orderId || !token) {
-      setOrder(null)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const o = await apiGet<ApiOrder>(`/orders/${orderId}`, token)
-      setOrder(o)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load order")
-      setOrder(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [orderId, token])
-
-  useEffect(() => {
-    if (open && orderId) void load()
-  }, [open, orderId, load])
+  const busy = cancelMutation.isPending || shipMutation.isPending
+  const error =
+    queryError
+      ? getApiErrorMessage(queryError)
+      : cancelMutation.error
+        ? getApiErrorMessage(cancelMutation.error)
+        : shipMutation.error
+          ? getApiErrorMessage(shipMutation.error)
+          : null
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://workspace.kunemi.local"
@@ -88,35 +78,27 @@ export function OrderDetailSheet({
   const hold = minutesLeft(order?.reservedUntil)
 
   async function cancel() {
-    if (!order || !token) return
-    setBusy(true)
+    if (!order) return
     try {
-      await apiSend(`/orders/${order.id}/cancel`, "PATCH", {}, token)
-      await load()
+      await cancelMutation.mutateAsync(order.id)
+      await refetch()
       onChanged?.()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Cancel failed")
-    } finally {
-      setBusy(false)
+    } catch {
+      /* error surfaced via mutation state */
     }
   }
 
   async function ship() {
-    if (!order || !token) return
-    setBusy(true)
+    if (!order) return
     try {
-      await apiSend(
-        "/deliveries",
-        "POST",
-        { orderId: order.id, fulfillmentMode: "manual" },
-        token,
-      )
-      await load()
+      await shipMutation.mutateAsync({
+        orderId: order.id,
+        fulfillmentMode: "manual",
+      })
+      await refetch()
       onChanged?.()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ship failed")
-    } finally {
-      setBusy(false)
+    } catch {
+      /* error surfaced via mutation state */
     }
   }
 

@@ -31,7 +31,7 @@ pnpm dev            # http://localhost:3000
 | Frontend UI (Next.js + shadcn, mock data) | **Strong** — freeform + catalog orders |
 | NestJS + persistence (JWT, orders, products, payments, deliveries, tracking) | **Done on Postgres** (+ SQLite fallback) |
 | Postgres RLS | **Done** (ENABLE policies + public tracking/pay definer fns) |
-| Wire frontend → API | **Partial** — auth, register, onboarding, pay + payments review |
+| Wire frontend → API | **Mostly done** — auth, orders, payments, inventory, deliveries, track, settings, team |
 | Payments module | **Bank transfer default done**; card gateway later |
 | AI agent runtime | **UI placeholder only** |
 | Integrations (WA/IG, pay gateway, courier) | **Not started** |
@@ -112,13 +112,14 @@ Also done:
 - [x] Deliveries + public tracking persistence
 - [x] Bank transfer payments + RLS on `payments` (+ optional proof upload)
 - [ ] Card gateway webhooks (optional path later)
-- [ ] Wire remaining frontend (orders, inventory, dashboard) off mocks → API
+- [x] Wire remaining frontend (orders, inventory, deliveries, track, settings, team) off mocks → API
+- [ ] Dashboard KPIs/charts still mock (derive later)
 - [ ] Cloudflare Worker edge webhook ingestion (payments, courier; later WA/IG)
 - [ ] Optional: non-owner DB role + `FORCE ROW LEVEL SECURITY`
 
 ### P1 — Product flows still UI-only or incomplete
 
-- [ ] Persist create-order from Next.js UI (server inventory reserve + payment link)
+- [x] Persist create-order from Next.js UI (server inventory reserve + payment link)
 - [x] Real bank-transfer pay link + countdown + claim + verify → `paid`
 - [ ] Card gateway webhooks (secondary method)
 - [ ] Courier API providers + webhooks (manual mode already works)
@@ -143,11 +144,11 @@ Also done:
 
 ### P3 — Polish / depth
 
-- [ ] Order detail mutations (cancel, resend pay link, ship) with server state
-- [ ] Inventory CRUD + restock (server)
+- [x] Order detail mutations (cancel, ship/create delivery) with server state
+- [x] Inventory list + restock (server)
 - [ ] Team invite + permission management (server)
 - [ ] Notification center (expiring holds, proofs, failed delivery)
-- [ ] Wire `/track/[token]` UI to `/api/tracking/:token`
+- [x] Wire `/track/[token]` UI to `/api/tracking/:token`
 - [ ] Tests (unit for totals engine, e2e for order lifecycle)
 - [ ] Deploy pipeline (frontend host + API + DB)
 

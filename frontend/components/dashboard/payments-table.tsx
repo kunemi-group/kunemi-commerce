@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Search,
   CreditCard,
@@ -33,7 +33,14 @@ import { PaymentStatusBadge } from "./status-badge"
 import { PaymentProofDialog } from "./payment-proof-dialog"
 import { EmptyState } from "./empty-state"
 import type { Payment, PaymentStatus } from "@/lib/data"
-import { API_BASE, apiGet, apiSend, formatNgn } from "@/lib/api"
+import {
+  API_BASE,
+  formatNgn,
+  usePayments,
+  useRejectPayment,
+  useVerifyPayment,
+  type ApiPayment,
+} from "@/api"
 import { useAuth } from "@/lib/auth-context"
 
 type FilterKey = "all" | "under_review" | "awaiting_payment" | "confirmed" | "failed"
@@ -45,26 +52,6 @@ const filters: { key: FilterKey; label: string }[] = [
   { key: "confirmed", label: "Confirmed" },
   { key: "failed", label: "Failed" },
 ]
-
-type ApiPayment = {
-  id: string
-  orderId: string
-  method: string
-  status: string
-  amountCents: number
-  reference: string
-  paymentUrl: string
-  customerNote: string | null
-  hasProof: boolean
-  proofFilename: string | null
-  proofUrl: string | null
-  rejectReason: string | null
-  updatedAt: string
-  order?: {
-    customerName: string
-    status: string
-  }
-}
 
 function mapApiStatus(s: string): PaymentStatus {
   switch (s) {
@@ -94,9 +81,10 @@ function mapApiRow(p: ApiPayment): Payment {
     reference: p.reference,
     proofLabel: p.hasProof ? p.proofFilename ?? "proof" : undefined,
     updated: new Date(p.updatedAt).toLocaleString(),
-    // extended fields used by dialog / actions
     _apiId: p.id,
-    _proofUrl: p.proofUrl ? `${API_BASE.replace(/\/api$/, "")}${p.proofUrl.startsWith("/api") ? p.proofUrl : `/api${p.proofUrl}`}` : undefined,
+    _proofUrl: p.proofUrl
+      ? `${API_BASE.replace(/\/api$/, "")}${p.proofUrl.startsWith("/api") ? p.proofUrl : `/api${p.proofUrl}`}`
+      : undefined,
     _customerNote: p.customerNote ?? undefined,
     _paymentUrl: p.paymentUrl,
     _rawStatus: p.status,
@@ -114,39 +102,27 @@ export function PaymentsTable({
 }: {
   defaultFilter?: FilterKey
 }) {
-  const { token, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [active, setActive] = useState<FilterKey>(defaultFilter)
   const [query, setQuery] = useState("")
-  const [rowsData, setRowsData] = useState<Payment[]>([])
   const [selected, setSelected] = useState<Payment | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [source, setSource] = useState<"api" | "empty">("empty")
+  const {
+    data: payments = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = usePayments(isAuthenticated)
+  const verifyMutation = useVerifyPayment()
+  const rejectMutation = useRejectPayment()
 
-  const load = useCallback(async () => {
-    if (!token) {
-      setLoading(false)
-      setError("Sign in to load payments")
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await apiGet<{ payments: ApiPayment[] }>("/payments", token)
-      setRowsData(res.payments.map(mapApiRow))
-      setSource("api")
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load payments")
-      setRowsData([])
-      setSource("empty")
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    if (isAuthenticated) void load()
-  }, [load, isAuthenticated])
+  const rowsData = useMemo(() => payments.map(mapApiRow), [payments])
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : "Failed to load payments"
+    : verifyMutation.error || rejectMutation.error
+      ? "Action failed"
+      : null
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -163,16 +139,10 @@ export function PaymentsTable({
   }, [active, query, rowsData])
 
   async function onResolved(id: string, action: "confirm" | "reject", note?: string) {
-    if (!token) return
-    try {
-      if (action === "confirm") {
-        await apiSend(`/payments/${id}/verify`, "PATCH", { note }, token)
-      } else {
-        await apiSend(`/payments/${id}/reject`, "PATCH", { reason: note }, token)
-      }
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Action failed")
+    if (action === "confirm") {
+      await verifyMutation.mutateAsync({ id, note })
+    } else {
+      await rejectMutation.mutateAsync({ id, reason: note })
     }
   }
 
@@ -200,7 +170,7 @@ export function PaymentsTable({
               size="sm"
               variant="outline"
               className="gap-1.5"
-              onClick={() => void load()}
+              onClick={() => void refetch()}
               disabled={loading}
             >
               {loading ? (
@@ -224,11 +194,9 @@ export function PaymentsTable({
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {source === "api" ? (
-            <p className="text-xs text-muted-foreground">
-              Live from API · bank transfer is default · confirm only after you see the money
-            </p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Live via TanStack Query + Axios · bank transfer is default
+          </p>
         </div>
 
         <CardContent className="p-0">
@@ -322,8 +290,6 @@ export function PaymentsTable({
                               size="icon"
                               variant="ghost"
                               className="size-8 text-success hover:bg-success/10 hover:text-success"
-                              aria-label={`Review payment ${p.id}`}
-                              title="Open proof"
                               onClick={() => setSelected(p)}
                             >
                               <FileImage className="size-4" />
@@ -332,8 +298,6 @@ export function PaymentsTable({
                               size="icon"
                               variant="ghost"
                               className="size-8 text-success hover:bg-success/10 hover:text-success"
-                              aria-label={`Confirm payment ${p.id}`}
-                              title="Confirm transfer"
                               onClick={() => void onResolved(p.id, "confirm")}
                             >
                               <Check className="size-4" />
@@ -342,8 +306,6 @@ export function PaymentsTable({
                               size="icon"
                               variant="ghost"
                               className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              aria-label={`Reject payment ${p.id}`}
-                              title="Reject proof"
                               onClick={() => void onResolved(p.id, "reject")}
                             >
                               <X className="size-4" />

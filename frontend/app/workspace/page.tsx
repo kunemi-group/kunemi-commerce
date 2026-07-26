@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   MessageCircle,
   Plus,
   Camera,
   Clock,
+  Loader2,
 } from "lucide-react"
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -18,18 +19,35 @@ import { EmptyState } from "@/components/dashboard/empty-state"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { allOrders, openChats } from "@/lib/data"
+import { openChats } from "@/lib/data"
 import { useRole } from "@/lib/role-context"
+import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
+import {
+  formatNgn,
+  minutesLeft,
+  shortId,
+  useOrders,
+} from "@/api"
 
 export default function WorkspacePage() {
   const { user, dense } = useRole()
+  const { isAuthenticated } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
   const [preset, setPreset] = useState<{ customer?: string; phone?: string }>({})
   const [detailId, setDetailId] = useState<string | null>(null)
+  const { data: orders = [], isLoading: ordersLoading, refetch } = useOrders(
+    isAuthenticated,
+  )
 
-  const myPending = allOrders.filter(
-    (o) => o.status === "pending" || o.status === "paid",
+  const myPending = useMemo(
+    () =>
+      orders
+        .filter((o) =>
+          ["pending", "payment_review", "paid"].includes(o.status),
+        )
+        .slice(0, 6),
+    [orders],
   )
 
   function openCreate(customer?: string, phone?: string) {
@@ -55,7 +73,7 @@ export default function WorkspacePage() {
         />
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-          {/* Open chats */}
+          {/* Open chats — mock until messaging API exists */}
           <Card className="lg:col-span-1 animate-fade-in">
             <CardHeader className={cn(dense && "py-3")}>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -114,37 +132,59 @@ export default function WorkspacePage() {
                   </button>
                 ))
               )}
+              <p className="pt-1 text-[11px] text-muted-foreground">
+                Sample inbox · messaging API not wired yet
+              </p>
             </CardContent>
           </Card>
 
-          {/* My pipeline */}
+          {/* Live pipeline */}
           <Card className="lg:col-span-1 animate-fade-in" style={{ animationDelay: "40ms" }}>
             <CardHeader className={cn(dense && "py-3")}>
               <CardTitle className="text-base">Your pipeline</CardTitle>
             </CardHeader>
             <CardContent className={cn("space-y-2", dense && "pt-0")}>
-              {myPending.slice(0, 6).map((order) => (
-                <button
-                  key={order.id}
-                  type="button"
-                  onClick={() => setDetailId(order.id)}
-                  className="flex w-full flex-col gap-1.5 rounded-lg border border-border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium tabular-nums">{order.id}</span>
-                    <StatusBadge status={order.status} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{order.customer}</span>
-                    <span className="tabular-nums font-medium text-foreground">
-                      {order.total}
-                    </span>
-                  </div>
-                  {order.status === "pending" && order.holdMinutesLeft != null ? (
-                    <HoldCountdown minutesLeft={order.holdMinutesLeft} compact />
-                  ) : null}
-                </button>
-              ))}
+              {ordersLoading ? (
+                <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading orders…
+                </div>
+              ) : myPending.length === 0 ? (
+                <EmptyState
+                  dense
+                  icon={Clock}
+                  title="Pipeline clear"
+                  description="No pending, review, or paid orders waiting. Create one from a chat."
+                />
+              ) : (
+                myPending.map((order) => {
+                  const hold = minutesLeft(order.reservedUntil)
+                  return (
+                    <button
+                      key={order.id}
+                      type="button"
+                      onClick={() => setDetailId(order.id)}
+                      className="flex w-full flex-col gap-1.5 rounded-lg border border-border bg-secondary/30 p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium tabular-nums">
+                          {shortId(order.id)}
+                        </span>
+                        <StatusBadge status={order.status} />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="truncate">{order.customerName}</span>
+                        <span className="tabular-nums font-medium text-foreground">
+                          {formatNgn(order.totalCents)}
+                        </span>
+                      </div>
+                      {order.status === "pending" && hold != null ? (
+                        <HoldCountdown minutesLeft={hold} compact />
+                      ) : null}
+                    </button>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
 
@@ -159,11 +199,13 @@ export default function WorkspacePage() {
         onOpenChange={setCreateOpen}
         presetCustomer={preset.customer}
         presetPhone={preset.phone}
+        onCreated={() => void refetch()}
       />
       <OrderDetailSheet
         orderId={detailId}
         open={!!detailId}
         onOpenChange={(o) => !o && setDetailId(null)}
+        onChanged={() => void refetch()}
       />
     </DashboardShell>
   )

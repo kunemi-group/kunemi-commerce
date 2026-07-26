@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Banknote,
   Boxes,
@@ -17,11 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import {
-  apiGet,
-  apiSend,
   formatNgn,
+  getApiErrorMessage,
+  useClaimPayment,
+  usePublicPay,
   type PublicPayResponse,
-} from "@/lib/api"
+} from "@/api"
 import { whatsappDeepLink } from "@/lib/whatsapp"
 
 function PaymentCountdown({
@@ -129,33 +130,27 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 }
 
 export function PayPageClient({ token }: { token: string }) {
-  const [data, setData] = useState<PublicPayResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const {
+    data,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = usePublicPay(token)
+  const claimMutation = useClaimPayment(token)
+  const [formError, setFormError] = useState<string | null>(null)
   const [note, setNote] = useState("")
   const [proofName, setProofName] = useState<string | null>(null)
   const [proofBase64, setProofBase64] = useState<string | null>(null)
   const [proofMime, setProofMime] = useState<string | null>(null)
   const [doneMsg, setDoneMsg] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await apiGet<PublicPayResponse>(`/pay/${token}`)
-      setData(res)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load payment")
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const error =
+    formError ||
+    (queryError
+      ? getApiErrorMessage(queryError)
+      : claimMutation.error
+        ? getApiErrorMessage(claimMutation.error)
+        : null)
 
   const amountLabel = useMemo(
     () => (data ? formatNgn(data.amountCents) : ""),
@@ -170,7 +165,7 @@ export function PayPageClient({ token }: { token: string }) {
       return
     }
     if (file.size > 4 * 1024 * 1024) {
-      setError("Proof must be 4MB or smaller")
+      setFormError("Proof must be 4MB or smaller")
       return
     }
     const reader = new FileReader()
@@ -185,23 +180,22 @@ export function PayPageClient({ token }: { token: string }) {
 
   async function claim() {
     if (!data?.canClaim) return
-    setSubmitting(true)
-    setError(null)
+    setFormError(null)
     try {
-      const res = await apiSend<{ message: string }>(`/pay/${token}/claim`, "POST", {
+      const res = await claimMutation.mutateAsync({
         customerNote: note.trim() || undefined,
         proofFilename: proofName || undefined,
         proofMimeType: proofMime || undefined,
         proofBase64: proofBase64 || undefined,
       })
       setDoneMsg(res.message)
-      await load()
+      await refetch()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit payment claim")
-    } finally {
-      setSubmitting(false)
+      setFormError(getApiErrorMessage(e) || "Could not submit payment claim")
     }
   }
+
+  const submitting = claimMutation.isPending
 
   if (loading) {
     return (

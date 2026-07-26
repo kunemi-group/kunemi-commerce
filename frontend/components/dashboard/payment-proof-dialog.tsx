@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { PaymentStatusBadge } from "./status-badge"
 import type { Payment } from "@/lib/data"
 import { cn } from "@/lib/utils"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, getStoredToken } from "@/api"
 
 type ExtPayment = Payment & {
   _proofUrl?: string
@@ -56,8 +56,7 @@ export function PaymentProofDialog({
     }
   }
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("kunemi_workspace_token") : null
+  const token = getStoredToken()
   const proofSrc = ext?._proofUrl
     ? ext._proofUrl.includes("?")
       ? ext._proofUrl
