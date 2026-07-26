@@ -1,0 +1,124 @@
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+
+export class CreateVariantDto {
+  @IsOptional()
+  @IsString()
+  sku?: string;
+
+  @IsInt()
+  @Min(0)
+  priceCents!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stockOnHand?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  taxExempt?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  lowStockThreshold?: number;
+
+  @IsOptional()
+  @IsObject()
+  attributes?: Record<string, string>;
+}
+
+export class CreateProductDto {
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateVariantDto)
+  variant?: CreateVariantDto;
+}
+
+export class UpdateProductDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+}
+
+export class UpdateVariantDto {
+  @IsOptional()
+  @IsString()
+  sku?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  priceCents?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  taxExempt?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  lowStockThreshold?: number;
+
+  @IsOptional()
+  @IsObject()
+  attributes?: Record<string, string> | null;
+}
+
+/** Add stock (or subtract if negative) without clobbering reserved units. */
+export class RestockVariantDto {
+  @IsInt()
+  delta!: number;
+}
+
+export class AddVariantDto {
+  @IsOptional()
+  @IsString()
+  sku?: string;
+
+  @IsInt()
+  @Min(0)
+  priceCents!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stockOnHand?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  taxExempt?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  lowStockThreshold?: number;
+
+  @IsOptional()
+  @IsObject()
+  attributes?: Record<string, string>;
+}
+

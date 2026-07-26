@@ -1,0 +1,15 @@
+# compiled
+/dist
+/node_modules
+
+# env & local DBs
+.env
+*.sqlite
+*.sqlite-journal
+
+# logs
+*.log
+coverage
+
+# customer payment proof uploads
+/uploads

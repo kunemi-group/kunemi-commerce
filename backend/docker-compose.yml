@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopflow-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: shopflow
+      POSTGRES_PASSWORD: shopflow
+      POSTGRES_DB: shopflow
+    volumes:
+      - shopflow_pg_data:/var/lib/postgresql/data
+      - ./docker/init-rls.sql:/docker-entrypoint-initdb.d/01-init-rls.sql:ro
+
+volumes:
+  shopflow_pg_data:
