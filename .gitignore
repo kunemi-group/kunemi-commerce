@@ -37,3 +37,6 @@ Thumbs.db
 
 # Nested package lock noise (keep root if added later)
 # backend/node_modules and frontend/node_modules covered above
+
+# Product docs (PRD, brand guidelines) — keep local only
+docs/
