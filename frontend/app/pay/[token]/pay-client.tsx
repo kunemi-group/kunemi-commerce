@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import {
-  formatNgn,
+  formatMoney,
   getApiErrorMessage,
   useClaimPayment,
   usePublicPay,
@@ -152,9 +152,10 @@ export function PayPageClient({ token }: { token: string }) {
         ? getApiErrorMessage(claimMutation.error)
         : null)
 
+  const currency = data?.currency || data?.business?.currency || "NGN"
   const amountLabel = useMemo(
-    () => (data ? formatNgn(data.amountCents) : ""),
-    [data],
+    () => (data ? formatMoney(data.amountCents, currency) : ""),
+    [data, currency],
   )
 
   async function onFile(file: File | null) {
@@ -337,23 +338,29 @@ export function PayPageClient({ token }: { token: string }) {
                   {item.quantity}× {item.description}
                 </span>
                 <span className="tabular-nums">
-                  {formatNgn(item.unitPriceCents * item.quantity)}
+                  {formatMoney(item.unitPriceCents * item.quantity, currency)}
                 </span>
               </div>
             ))}
             <div className="flex justify-between border-t border-border pt-2 text-muted-foreground">
               <span>Shipping</span>
-              <span className="tabular-nums">{formatNgn(data.order.shippingFeeCents)}</span>
+              <span className="tabular-nums">
+                {formatMoney(data.order.shippingFeeCents, currency)}
+              </span>
             </div>
             {data.order.taxCents > 0 ? (
               <div className="flex justify-between text-muted-foreground">
                 <span>Tax</span>
-                <span className="tabular-nums">{formatNgn(data.order.taxCents)}</span>
+                <span className="tabular-nums">
+                  {formatMoney(data.order.taxCents, currency)}
+                </span>
               </div>
             ) : null}
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span className="tabular-nums">{formatNgn(data.order.totalCents)}</span>
+              <span className="tabular-nums">
+                {formatMoney(data.order.totalCents, currency)}
+              </span>
             </div>
           </CardContent>
         </Card>

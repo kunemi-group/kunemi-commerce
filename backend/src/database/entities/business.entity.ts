@@ -64,6 +64,40 @@ export class Business {
   @Column({ name: 'brand_color', type: 'text', default: '#4f6bed' })
   brandColor!: string;
 
+  /**
+   * ISO 4217 currency for this business (global product — not NGN-locked).
+   * Amounts stored as integer minor units (e.g. cents/kobo).
+   */
+  @Column({ type: 'text', default: 'NGN' })
+  currency!: string;
+
+  /**
+   * Default payment method id. Pluggable stack — bank_transfer now;
+   * stripe / paystack later via PaymentProvider registry.
+   */
+  @Column({ name: 'default_payment_method', type: 'text', default: 'bank_transfer' })
+  defaultPaymentMethod!: string;
+
+  /** JSON array of enabled provider ids, e.g. ["bank_transfer","stripe"] */
+  @Column({
+    name: 'enabled_payment_methods_json',
+    type: 'text',
+    default: '["bank_transfer"]',
+  })
+  enabledPaymentMethodsJson!: string;
+
+  /** Public ShopFlow store slug — unique when set */
+  @Column({ name: 'store_slug', type: 'text', nullable: true, unique: true })
+  storeSlug!: string | null;
+
+  /** When false, public /store/:slug returns 404 */
+  @Column({ name: 'store_enabled', type: 'boolean', default: true })
+  storeEnabled!: boolean;
+
+  /** Storage key for logo (R2/local) */
+  @Column({ name: 'logo_key', type: 'text', nullable: true })
+  logoKey!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;
 

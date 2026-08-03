@@ -13,6 +13,9 @@ import { PaymentsModule } from './payments/payments.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { DocumentsModule } from './documents/documents.module';
+import { StorageModule } from './storage/storage.module';
+import { StoreModule } from './store/store.module';
+import { ChatModule } from './chat/chat.module';
 import { DatabaseModule } from './database/database.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
@@ -31,6 +34,8 @@ import {
   QuotationItem,
   Invoice,
   InvoiceItem,
+  ChatThread,
+  ChatMessage,
 } from './database/entities';
 import { Public } from './common/decorators/public.decorator';
 import { Controller, Get } from '@nestjs/common';
@@ -49,6 +54,17 @@ class RootController {
         'POST /api/pay/:token/claim',
         'GET /api/payments',
         'PATCH /api/payments/:id/verify',
+      ],
+      storage: ['POST /api/uploads', 'GET /api/media/:token', 'GET /api/storage/status'],
+      storefront: [
+        'GET /api/store/:slug',
+        'GET /api/store/:slug/products',
+        'GET /api/store/:slug/products/:productId',
+      ],
+      documents: [
+        'GET|POST /api/quotations',
+        'GET|POST /api/invoices',
+        'POST /api/quotations/:id/convert-to-invoice',
       ],
     };
   }
@@ -77,6 +93,8 @@ class RootController {
           QuotationItem,
           Invoice,
           InvoiceItem,
+          ChatThread,
+          ChatMessage,
         ];
         const logging = config.get<string>('TYPEORM_LOGGING') === 'true';
         // Prefer Postgres in prod; better-sqlite3 for local dev without Docker
@@ -104,6 +122,7 @@ class RootController {
       },
     }),
     DatabaseModule,
+    StorageModule,
     HealthModule,
     AuthModule,
     BusinessesModule,
@@ -114,6 +133,8 @@ class RootController {
     DeliveriesModule,
     TrackingModule,
     DocumentsModule,
+    StoreModule,
+    ChatModule,
   ],
   controllers: [RootController],
   providers: [

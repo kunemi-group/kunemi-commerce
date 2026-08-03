@@ -12,7 +12,18 @@ import { Business } from '../database/entities/business.entity';
 import { User } from '../database/entities/user.entity';
 import type { AuthUser, JwtPayload } from '../common/types/auth-user';
 import { onboardingStatus } from '../common/onboarding';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { normalizeCurrency } from '../common/currency';
+import { StorageService } from '../storage/storage.service';
+import { LoginDto, RegisterBuyerDto, RegisterDto } from './dto/auth.dto';
+
+function slugify(name: string) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return base || 'store';
+}
 
 @Injectable()
 export class AuthService {
@@ -22,6 +33,7 @@ export class AuthService {
     @InjectRepository(User)
     private readonly users: Repository<User>,
     private readonly jwt: JwtService,
+    private readonly storage: StorageService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -31,6 +43,12 @@ export class AuthService {
     }
 
     // Bank details intentionally empty — owner must complete onboarding before selling.
+    let storeSlug = slugify(dto.businessName);
+    const slugTaken = await this.businesses.findOne({ where: { storeSlug } });
+    if (slugTaken) {
+      storeSlug = `${storeSlug}-${Date.now().toString(36).slice(-4)}`;
+    }
+
     const business = this.businesses.create({
       name: dto.businessName,
       whatsappNumber: dto.whatsappNumber?.trim() || null,
@@ -44,6 +62,12 @@ export class AuthService {
       bankAccountName: null,
       bankAccountNumber: null,
       brandColor: '#4f6bed',
+      currency: 'NGN', // default only — changeable per business (global product)
+      defaultPaymentMethod: 'bank_transfer',
+      enabledPaymentMethodsJson: '["bank_transfer"]',
+      storeSlug,
+      storeEnabled: true,
+      logoKey: null,
     });
     await this.businesses.save(business);
 
@@ -57,6 +81,25 @@ export class AuthService {
     });
     await this.users.save(user);
 
+    return this.tokenResponse(user);
+  }
+
+  /** ShopFlow buyer registration — no business, no Workspace access */
+  async registerBuyer(dto: RegisterBuyerDto) {
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.users.findOne({ where: { email } });
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const user = this.users.create({
+      businessId: null,
+      email,
+      passwordHash,
+      fullName: dto.fullName.trim(),
+      role: 'buyer',
+    });
+    await this.users.save(user);
     return this.tokenResponse(user);
   }
 
@@ -74,14 +117,53 @@ export class AuthService {
     return this.tokenResponse(user);
   }
 
+  /**
+   * ShopFlow login — buyers only. Staff must use Workspace.
+   */
+  async loginBuyer(dto: LoginDto) {
+    const result = await this.login(dto);
+    if (result.user.role !== 'buyer') {
+      throw new UnauthorizedException(
+        'Business accounts sign in on Kunemi Workspace, not ShopFlow',
+      );
+    }
+    return result;
+  }
+
+  /**
+   * Workspace login — staff only. Buyers must use ShopFlow.
+   */
+  async loginWorkspace(dto: LoginDto) {
+    const result = await this.login(dto);
+    if (result.user.role === 'buyer') {
+      throw new UnauthorizedException(
+        'Buyer accounts sign in on ShopFlow, not Workspace',
+      );
+    }
+    return result;
+  }
+
   async me(authUser: AuthUser) {
     const user = await this.users.findOne({
-      where: { id: authUser.sub, businessId: authUser.businessId },
+      where: { id: authUser.sub },
     });
     if (!user) throw new NotFoundException('User not found');
 
+    if (user.role === 'buyer' || !user.businessId) {
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          businessId: null,
+        },
+        business: null,
+      };
+    }
+
     const business = await this.businesses.findOne({
-      where: { id: authUser.businessId },
+      where: { id: user.businessId },
     });
     if (!business) throw new NotFoundException('Business not found');
 
@@ -98,6 +180,18 @@ export class AuthService {
   }
 
   businessProfile(business: Business) {
+    let enabledPaymentMethods: string[] = ['bank_transfer'];
+    try {
+      const parsed = JSON.parse(
+        business.enabledPaymentMethodsJson || '["bank_transfer"]',
+      ) as string[];
+      if (Array.isArray(parsed) && parsed.length) {
+        enabledPaymentMethods = parsed;
+      }
+    } catch {
+      /* default */
+    }
+
     return {
       id: business.id,
       name: business.name,
@@ -105,6 +199,11 @@ export class AuthService {
       email: business.email,
       address: business.address,
       tier: business.subscriptionTier,
+      currency: normalizeCurrency(business.currency),
+      payments: {
+        defaultMethod: business.defaultPaymentMethod || 'bank_transfer',
+        enabledMethods: enabledPaymentMethods,
+      },
       tax: {
         enabled: business.taxEnabled,
         ratePercent: Number(business.taxRatePercent),
@@ -119,6 +218,15 @@ export class AuthService {
         accountNumber: business.bankAccountNumber,
       },
       brandColor: business.brandColor,
+      store: {
+        slug: business.storeSlug,
+        enabled: business.storeEnabled,
+        publicPath: business.storeSlug
+          ? `/api/store/${business.storeSlug}`
+          : null,
+      },
+      logoKey: business.logoKey,
+      logoUrl: this.storage.publicUrl(business.logoKey),
       onboarding: onboardingStatus(business),
     };
   }
@@ -126,7 +234,8 @@ export class AuthService {
   private tokenResponse(user: User) {
     const payload: JwtPayload = {
       sub: user.id,
-      businessId: user.businessId,
+      // Buyers: empty string so staff-scoped services keep string typing
+      businessId: user.businessId ?? '',
       role: user.role,
       email: user.email,
     };

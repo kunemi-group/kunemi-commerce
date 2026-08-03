@@ -9,7 +9,6 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { createReadStream } from 'fs';
 import { PaymentsService } from './payments.service';
 import {
   ClaimPaymentDto,
@@ -42,12 +41,12 @@ export class PaymentsController {
     @CurrentUser() user: AuthUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const file = await this.payments.getProofAbsolutePath(id, user);
+    const file = await this.payments.getProofFile(id, user);
     res.set({
       'Content-Type': file.mimeType,
       'Content-Disposition': `inline; filename="${file.filename}"`,
     });
-    return new StreamableFile(createReadStream(file.absolutePath));
+    return new StreamableFile(file.buffer);
   }
 
   @Patch('payments/:id/verify')

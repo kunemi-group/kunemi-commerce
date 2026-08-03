@@ -10,7 +10,8 @@ import {
 import { dateTimeType } from '../column-types';
 import { Business } from './business.entity';
 
-export type UserRole = 'owner' | 'manager' | 'sales' | 'ops';
+/** Staff use Workspace; buyers use ShopFlow only (no businessId). */
+export type UserRole = 'owner' | 'manager' | 'sales' | 'ops' | 'buyer';
 
 @Entity('users')
 @Unique(['businessId', 'email'])
@@ -18,14 +19,19 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'business_id', type: 'uuid' })
-  businessId!: string;
+  /** Null for ShopFlow buyers; required for Workspace staff */
+  @Column({ name: 'business_id', type: 'uuid', nullable: true })
+  businessId!: string | null;
 
-  @ManyToOne(() => Business, (b) => b.users, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Business, (b) => b.users, {
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
   @JoinColumn({ name: 'business_id' })
-  business!: Business;
+  business!: Business | null;
 
-  @Column({ type: 'text' })
+  /** Globally unique for login (staff + buyers share one identity plane) */
+  @Column({ type: 'text', unique: true })
   email!: string;
 
   @Column({ name: 'password_hash', type: 'text' })

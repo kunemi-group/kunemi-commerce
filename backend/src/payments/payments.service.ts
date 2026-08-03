@@ -6,8 +6,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
-import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
-import { join, extname } from 'path';
 import { DataSource, In, Repository } from 'typeorm';
 import type { AuthUser } from '../common/types/auth-user';
 import { Business } from '../database/entities/business.entity';
@@ -16,7 +14,10 @@ import { OrderItem } from '../database/entities/order-item.entity';
 import { OrderStatusHistory } from '../database/entities/order-status-history.entity';
 import { Payment } from '../database/entities/payment.entity';
 import { ProductVariant } from '../database/entities/product-variant.entity';
+import { normalizeCurrency } from '../common/currency';
+import { StorageService } from '../storage/storage.service';
 import { ClaimPaymentDto, RejectPaymentDto } from './dto/payment.dto';
+import { PaymentProviderRegistry } from './providers/payment-provider.registry';
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -31,7 +32,6 @@ const MAX_PROOF_BYTES = 4 * 1024 * 1024;
 export class PaymentsService {
   private readonly useRowLocks: boolean;
   private readonly frontendBase: string;
-  private readonly uploadsRoot: string;
 
   constructor(
     private readonly dataSource: DataSource,
@@ -42,15 +42,13 @@ export class PaymentsService {
     private readonly orders: Repository<Order>,
     @InjectRepository(Business)
     private readonly businesses: Repository<Business>,
+    private readonly storage: StorageService,
+    private readonly paymentProviders: PaymentProviderRegistry,
   ) {
     const dbType = this.config.get<string>('DATABASE_TYPE', 'postgres');
     this.useRowLocks = dbType !== 'sqlite' && dbType !== 'better-sqlite3';
     this.frontendBase =
       this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
-    this.uploadsRoot = join(process.cwd(), 'uploads', 'payment-proofs');
-    if (!existsSync(this.uploadsRoot)) {
-      mkdirSync(this.uploadsRoot, { recursive: true });
-    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,13 +67,21 @@ export class PaymentsService {
     },
   ): Promise<Payment> {
     const paymentRepo = manager.getRepository(Payment);
-    const reference = `SF-${opts.orderId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+    const businessRepo = manager.getRepository(Business);
+    const business = await businessRepo.findOne({
+      where: { id: opts.businessId },
+    });
+    const provider = business
+      ? this.paymentProviders.resolveForBusiness(business)
+      : this.paymentProviders.get('bank_transfer')!;
+
+    const reference = `KW-${opts.orderId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
     const paymentToken = `pay_${randomBytes(12).toString('hex')}`;
 
     const payment = paymentRepo.create({
       businessId: opts.businessId,
       orderId: opts.orderId,
-      method: 'bank_transfer',
+      method: provider.id as Payment['method'],
       status: 'awaiting_transfer',
       amountCents: opts.amountCents,
       reference,
@@ -89,7 +95,8 @@ export class PaymentsService {
       verifiedAt: null,
       rejectReason: null,
     });
-    return paymentRepo.save(payment);
+    const saved = await paymentRepo.save(payment);
+    return saved;
   }
 
   paymentUrl(token: string) {
@@ -139,14 +146,21 @@ export class PaymentsService {
         ? Math.max(0, Math.floor((due - now) / 1000))
         : null;
 
+    const currency = normalizeCurrency(business.currency);
+    const provider =
+      this.paymentProviders.get(payment.method) ??
+      this.paymentProviders.resolveForBusiness(business);
+    const customerView = provider.buildCustomerView(payment, business, order);
+
     return {
       token: payment.paymentToken,
       method: payment.method,
+      providerLabel: customerView.providerLabel,
       paymentStatus: payment.status,
       orderStatus: order.status,
       reference: payment.reference,
       amountCents: payment.amountCents,
-      currency: 'NGN',
+      currency,
       paymentDueAt: order.reservedUntil?.toISOString() ?? null,
       secondsRemaining,
       expired:
@@ -158,16 +172,22 @@ export class PaymentsService {
       canClaim:
         order.status === 'pending' &&
         payment.status === 'awaiting_transfer' &&
+        customerView.requiresManualClaim &&
         (due === null || due >= now),
       underReview: order.status === 'payment_review',
       paid: order.status === 'paid' || ['shipped', 'delivered'].includes(order.status),
       rejectReason: payment.rejectReason,
+      checkoutUrl: customerView.checkoutUrl,
+      requiresManualClaim: customerView.requiresManualClaim,
       business: {
         name: business.name,
         whatsapp: business.whatsappNumber,
-        bankName: business.bankName,
-        bankAccountName: business.bankAccountName,
-        bankAccountNumber: business.bankAccountNumber,
+        currency,
+        bankName: customerView.bank?.bankName ?? business.bankName,
+        bankAccountName:
+          customerView.bank?.accountName ?? business.bankAccountName,
+        bankAccountNumber:
+          customerView.bank?.accountNumber ?? business.bankAccountNumber,
       },
       order: {
         id: order.id,
@@ -178,18 +198,15 @@ export class PaymentsService {
         taxCents: order.taxCents,
         shippingFeeCents: order.shippingFeeCents,
         totalCents: order.totalCents,
+        currency,
         items: (order.items ?? []).map((i) => ({
           description: i.description,
           quantity: i.quantity,
           unitPriceCents: i.unitPriceCents,
         })),
       },
-      instructions: [
-        'Transfer the exact amount to the business account below.',
-        `Use reference ${payment.reference} in the transfer narration.`,
-        'Tap “I have made payment” when done (receipt upload optional).',
-        'Your order is confirmed only after the business verifies the transfer.',
-      ],
+      instructions: customerView.instructions,
+      availablePaymentMethods: this.paymentProviders.listAvailable(business),
     };
   }
 
@@ -240,7 +257,11 @@ export class PaymentsService {
       let proofMimeType: string | null = null;
 
       if (dto.proofBase64?.trim()) {
-        const saved = this.saveProof(payment.id, dto);
+        const saved = await this.saveProof(
+          payment.id,
+          dto,
+          payment.businessId,
+        );
         proofPath = saved.path;
         proofFilename = saved.filename;
         proofMimeType = saved.mimeType;
@@ -442,19 +463,41 @@ export class PaymentsService {
     });
   }
 
-  async getProofAbsolutePath(id: string, user: AuthUser) {
+  async getProofFile(id: string, user: AuthUser) {
     const p = await this.payments.findOne({
       where: { id, businessId: user.businessId },
     });
     if (!p) throw new NotFoundException('Payment not found');
     if (!p.proofPath) throw new NotFoundException('No proof uploaded');
-    const abs = join(process.cwd(), p.proofPath);
-    if (!existsSync(abs)) throw new NotFoundException('Proof file missing');
-    return {
-      absolutePath: abs,
-      filename: p.proofFilename ?? 'proof',
-      mimeType: p.proofMimeType ?? 'application/octet-stream',
-    };
+
+    // Legacy local relative paths under uploads/
+    const obj = await this.storage.getObject(p.proofPath);
+    if (obj) {
+      return {
+        buffer: obj.buffer,
+        filename: p.proofFilename ?? 'proof',
+        mimeType: p.proofMimeType ?? obj.contentType,
+        url: this.storage.publicUrl(p.proofPath),
+      };
+    }
+
+    // Fallback: legacy disk path relative to cwd
+    try {
+      const { existsSync, readFileSync } = await import('fs');
+      const { join } = await import('path');
+      const abs = join(process.cwd(), p.proofPath);
+      if (existsSync(abs)) {
+        return {
+          buffer: readFileSync(abs),
+          filename: p.proofFilename ?? 'proof',
+          mimeType: p.proofMimeType ?? 'application/octet-stream',
+          url: null,
+        };
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new NotFoundException('Proof file missing');
   }
 
   /** Mark payment expired when order hold expires */
@@ -494,67 +537,29 @@ export class PaymentsService {
     }
   }
 
-  private saveProof(
+  private async saveProof(
     paymentId: string,
     dto: ClaimPaymentDto,
-  ): { path: string; filename: string; mimeType: string } {
-    let raw = dto.proofBase64!.trim();
-    let mime = dto.proofMimeType?.trim() || 'image/jpeg';
-
-    const dataUrl = /^data:([^;]+);base64,(.+)$/i.exec(raw);
-    if (dataUrl) {
-      mime = dataUrl[1];
-      raw = dataUrl[2];
-    }
-
-    if (!ALLOWED_MIME.has(mime)) {
-      throw new BadRequestException(
-        'Proof must be JPEG, PNG, WebP, or PDF',
-      );
-    }
-
-    let buffer: Buffer;
-    try {
-      buffer = Buffer.from(raw, 'base64');
-    } catch {
-      throw new BadRequestException('Invalid proof encoding');
-    }
-    if (!buffer.length || buffer.length > MAX_PROOF_BYTES) {
-      throw new BadRequestException(
-        `Proof must be between 1 byte and ${MAX_PROOF_BYTES / (1024 * 1024)}MB`,
-      );
-    }
-
-    const ext =
-      mime === 'application/pdf'
-        ? '.pdf'
-        : mime === 'image/png'
-          ? '.png'
-          : mime === 'image/webp'
-            ? '.webp'
-            : '.jpg';
-
-    const safeName = (dto.proofFilename || `proof${ext}`)
-      .replace(/[^a-zA-Z0-9._-]/g, '_')
-      .slice(0, 80);
-    const stored = `${paymentId}_${Date.now()}${extname(safeName) || ext}`;
-    const abs = join(this.uploadsRoot, stored);
-    writeFileSync(abs, buffer);
-
+    businessId: string,
+  ): Promise<{ path: string; filename: string; mimeType: string }> {
+    const stored = await this.storage.uploadBase64({
+      businessId,
+      purpose: 'payment_proof',
+      base64: dto.proofBase64!,
+      contentType: dto.proofMimeType || 'image/jpeg',
+      filename: dto.proofFilename || `proof-${paymentId}`,
+      maxBytes: MAX_PROOF_BYTES,
+      allowedMime: ALLOWED_MIME,
+    });
     return {
-      path: join('uploads', 'payment-proofs', stored).replace(/\\/g, '/'),
-      filename: safeName,
-      mimeType: mime,
+      path: stored.key,
+      filename: stored.filename,
+      mimeType: stored.contentType,
     };
   }
 
   private safeUnlink(relativePath: string) {
-    try {
-      const abs = join(process.cwd(), relativePath);
-      if (existsSync(abs)) unlinkSync(abs);
-    } catch {
-      /* ignore */
-    }
+    void this.storage.delete(relativePath);
   }
 
   private toBusinessDto(p: Payment, detail = false) {

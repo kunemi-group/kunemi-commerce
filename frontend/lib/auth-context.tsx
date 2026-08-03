@@ -99,7 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await loginRequest(email, password)
         await applySession(res.accessToken)
         const me = await fetchMe()
-        return { onboardingComplete: Boolean(me.business.onboarding?.complete) }
+        return {
+          onboardingComplete: Boolean(me.business?.onboarding?.complete),
+        }
       } finally {
         setLoading(false)
       }
@@ -120,7 +122,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await registerRequest(input)
         await applySession(res.accessToken)
         const me = await fetchMe()
-        return { onboardingComplete: Boolean(me.business.onboarding?.complete) }
+        return {
+          onboardingComplete: Boolean(me.business?.onboarding?.complete),
+        }
       } finally {
         setLoading(false)
       }

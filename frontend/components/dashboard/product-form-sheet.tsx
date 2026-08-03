@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   getApiErrorMessage,
+  uploadFile,
   useAddVariant,
   useCreateProduct,
   useUpdateProduct,
@@ -52,11 +53,16 @@ export function ProductFormSheet({
   const [stock, setStock] = useState("0")
   const [threshold, setThreshold] = useState("5")
   const [taxExempt, setTaxExempt] = useState(false)
+  const [publishedToStore, setPublishedToStore] = useState(true)
+  const [imageKey, setImageKey] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !mode) return
     setError(null)
+    setUploading(false)
     if (mode.type === "create") {
       setName("")
       setDescription("")
@@ -66,9 +72,15 @@ export function ProductFormSheet({
       setStock("0")
       setThreshold("5")
       setTaxExempt(false)
+      setPublishedToStore(true)
+      setImageKey(null)
+      setImageUrl(null)
     } else if (mode.type === "edit-product") {
       setName(mode.product.name)
       setDescription(mode.product.description ?? "")
+      setPublishedToStore(mode.product.publishedToStore ?? true)
+      setImageKey(mode.product.imageKey ?? null)
+      setImageUrl(mode.product.imageUrl ?? null)
     } else if (mode.type === "add-variant") {
       setSku("")
       setVariantLabel("")
@@ -76,6 +88,8 @@ export function ProductFormSheet({
       setStock("0")
       setThreshold("5")
       setTaxExempt(false)
+      setImageKey(null)
+      setImageUrl(null)
     } else if (mode.type === "edit-variant") {
       const v = mode.variant
       setSku(v.sku ?? "")
@@ -85,6 +99,8 @@ export function ProductFormSheet({
       setPriceNaira(String(Math.round(v.priceCents / 100)))
       setThreshold(String(v.lowStockThreshold ?? 5))
       setTaxExempt(!!v.taxExempt)
+      setImageKey(v.imageKey ?? null)
+      setImageUrl(v.imageUrl ?? null)
     }
   }, [open, mode])
 
@@ -92,7 +108,31 @@ export function ProductFormSheet({
     createProduct.isPending ||
     updateProduct.isPending ||
     addVariant.isPending ||
-    updateVariant.isPending
+    updateVariant.isPending ||
+    uploading
+
+  async function onPickImage(file: File | null) {
+    if (!file) return
+    if (file.size > 8 * 1024 * 1024) {
+      setError("Image must be 8MB or smaller")
+      return
+    }
+    setUploading(true)
+    setError(null)
+    try {
+      const purpose =
+        mode?.type === "edit-variant" || mode?.type === "add-variant"
+          ? "variant"
+          : "product"
+      const res = await uploadFile(file, purpose)
+      setImageKey(res.key)
+      setImageUrl(res.url)
+    } catch (e) {
+      setError(getApiErrorMessage(e) || "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const title =
     mode?.type === "create"
@@ -122,6 +162,8 @@ export function ProductFormSheet({
         await createProduct.mutateAsync({
           name: name.trim(),
           description: description.trim() || undefined,
+          imageKey: imageKey || undefined,
+          publishedToStore,
           variant: {
             sku: sku.trim() || undefined,
             priceCents: price,
@@ -143,6 +185,8 @@ export function ProductFormSheet({
           payload: {
             name: name.trim(),
             description: description.trim() || null,
+            imageKey,
+            publishedToStore,
           },
         })
       } else if (mode.type === "add-variant") {
@@ -159,6 +203,7 @@ export function ProductFormSheet({
             stockOnHand: Math.max(0, Math.floor(Number(stock) || 0)),
             lowStockThreshold: Math.max(0, Math.floor(Number(threshold) || 5)),
             taxExempt,
+            imageKey: imageKey || undefined,
             attributes: variantLabel.trim()
               ? { label: variantLabel.trim() }
               : { label: "Default" },
@@ -177,6 +222,7 @@ export function ProductFormSheet({
             priceCents: price,
             lowStockThreshold: Math.max(0, Math.floor(Number(threshold) || 5)),
             taxExempt,
+            imageKey,
             attributes: variantLabel.trim()
               ? { label: variantLabel.trim() }
               : { label: "Default" },
@@ -227,9 +273,27 @@ export function ProductFormSheet({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  placeholder="Short notes for your team"
+                  placeholder="Shown on ShopFlow storefront"
                   className="resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
+              </label>
+              <ImageField
+                url={imageUrl}
+                uploading={uploading}
+                onPick={(f) => void onPickImage(f)}
+                onClear={() => {
+                  setImageKey(null)
+                  setImageUrl(null)
+                }}
+              />
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={publishedToStore}
+                  onChange={(e) => setPublishedToStore(e.target.checked)}
+                  className="size-3.5 rounded border-border"
+                />
+                Publish to ShopFlow store
               </label>
             </>
           ) : null}
@@ -244,6 +308,18 @@ export function ProductFormSheet({
                 onChange={setVariantLabel}
                 placeholder="e.g. Size M / Red"
               />
+              {(mode.type === "add-variant" || mode.type === "edit-variant") && (
+                <ImageField
+                  url={imageUrl}
+                  uploading={uploading}
+                  onPick={(f) => void onPickImage(f)}
+                  onClear={() => {
+                    setImageKey(null)
+                    setImageUrl(null)
+                  }}
+                  label="Variant image (optional)"
+                />
+              )}
               <Field label="SKU (optional)" value={sku} onChange={setSku} placeholder="SKU-001" />
               <Field
                 label="Unit price (₦)"
@@ -322,5 +398,55 @@ function Field({
         className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
     </label>
+  )
+}
+
+function ImageField({
+  url,
+  uploading,
+  onPick,
+  onClear,
+  label = "Product image",
+}: {
+  url: string | null
+  uploading: boolean
+  onPick: (file: File | null) => void
+  onClear: () => void
+  label?: string
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      {url ? (
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt=""
+            className="size-16 rounded-md border border-border object-cover"
+          />
+          <Button type="button" size="sm" variant="outline" onClick={onClear}>
+            Remove
+          </Button>
+        </div>
+      ) : null}
+      <label className="flex cursor-pointer flex-col gap-1 rounded-md border border-dashed border-input px-3 py-3 text-sm text-muted-foreground">
+        {uploading ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Uploading to storage…
+          </span>
+        ) : (
+          <span>JPEG, PNG, WebP · max 8MB · Cloudflare R2 when configured</span>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="sr-only"
+          disabled={uploading}
+          onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+        />
+      </label>
+    </div>
   )
 }

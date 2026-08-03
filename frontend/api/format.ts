@@ -1,11 +1,78 @@
 import type { ApiProduct } from "./types"
 
+/** ISO currencies we surface in Workspace settings (global product). */
+export const SUPPORTED_CURRENCIES = [
+  "NGN",
+  "USD",
+  "GBP",
+  "EUR",
+  "GHS",
+  "KES",
+  "ZAR",
+  "XOF",
+  "XAF",
+  "CAD",
+  "AUD",
+  "INR",
+] as const
+
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]
+
+const ZERO_DECIMAL = new Set([
+  "BIF",
+  "CLP",
+  "DJF",
+  "GNF",
+  "JPY",
+  "KMF",
+  "KRW",
+  "MGA",
+  "PYG",
+  "RWF",
+  "UGX",
+  "VND",
+  "VUV",
+  "XAF",
+  "XOF",
+  "XPF",
+])
+
+export function normalizeCurrency(code?: string | null): string {
+  const c = (code || "NGN").trim().toUpperCase()
+  return /^[A-Z]{3}$/.test(c) ? c : "NGN"
+}
+
+export function currencyFractionDigits(currency: string): number {
+  return ZERO_DECIMAL.has(normalizeCurrency(currency)) ? 0 : 2
+}
+
+/**
+ * Format integer minor units in any ISO currency.
+ * @deprecated Prefer formatMoney(cents, currency) — formatNgn kept for call sites.
+ */
+export function formatMoney(
+  amountMinor: number,
+  currency: string = "NGN",
+  locale?: string,
+) {
+  const c = normalizeCurrency(currency)
+  const digits = currencyFractionDigits(c)
+  const major = amountMinor / Math.pow(10, digits)
+  try {
+    return new Intl.NumberFormat(locale || undefined, {
+      style: "currency",
+      currency: c,
+      maximumFractionDigits: digits,
+      minimumFractionDigits: digits === 0 ? 0 : undefined,
+    }).format(major)
+  } catch {
+    return `${c} ${major.toFixed(digits)}`
+  }
+}
+
+/** @deprecated Use formatMoney(cents, business.currency) */
 export function formatNgn(cents: number) {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
+  return formatMoney(cents, "NGN")
 }
 
 export function shortId(uuid: string) {
@@ -32,7 +99,10 @@ export function relativeTime(iso: string | Date | null | undefined): string {
 }
 
 /** Flatten products → inventory rows for tables / order drawer */
-export function flattenInventory(products: ApiProduct[]) {
+export function flattenInventory(
+  products: ApiProduct[],
+  currency: string = "NGN",
+) {
   const rows: Array<{
     id: string
     productId: string
@@ -59,7 +129,7 @@ export function flattenInventory(products: ApiProduct[]) {
         variant: attrs,
         sku: v.sku || v.id.slice(0, 8).toUpperCase(),
         category: "Catalog",
-        price: formatNgn(v.priceCents),
+        price: formatMoney(v.priceCents, currency),
         priceCents: v.priceCents,
         onHand: v.stockOnHand,
         reserved: v.stockReserved,

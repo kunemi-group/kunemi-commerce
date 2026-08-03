@@ -1,6 +1,6 @@
 import { apiClient, toApiError } from "../client"
 import type {
-  ApiInvoice,
+  ApiInvoiceDoc,
   ApiQuotation,
   CreateDocumentPayload,
 } from "../types"
@@ -60,7 +60,7 @@ export async function acceptQuotation(id: string) {
 
 export async function convertQuotationToInvoice(id: string) {
   try {
-    const { data } = await apiClient.post<ApiInvoice>(
+    const { data } = await apiClient.post<ApiInvoiceDoc>(
       `/quotations/${id}/convert-to-invoice`,
       {},
     )
@@ -72,7 +72,9 @@ export async function convertQuotationToInvoice(id: string) {
 
 export async function listInvoices() {
   try {
-    const { data } = await apiClient.get<{ invoices: ApiInvoice[] }>("/invoices")
+    const { data } = await apiClient.get<{ invoices: ApiInvoiceDoc[] }>(
+      "/invoices",
+    )
     return data.invoices ?? []
   } catch (e) {
     throw toApiError(e)
@@ -81,7 +83,7 @@ export async function listInvoices() {
 
 export async function getInvoice(id: string) {
   try {
-    const { data } = await apiClient.get<ApiInvoice>(`/invoices/${id}`)
+    const { data } = await apiClient.get<ApiInvoiceDoc>(`/invoices/${id}`)
     return data
   } catch (e) {
     throw toApiError(e)
@@ -90,7 +92,7 @@ export async function getInvoice(id: string) {
 
 export async function createInvoice(payload: CreateDocumentPayload) {
   try {
-    const { data } = await apiClient.post<ApiInvoice>("/invoices", payload)
+    const { data } = await apiClient.post<ApiInvoiceDoc>("/invoices", payload)
     return data
   } catch (e) {
     throw toApiError(e)
@@ -99,7 +101,7 @@ export async function createInvoice(payload: CreateDocumentPayload) {
 
 export async function sendInvoice(id: string) {
   try {
-    const { data } = await apiClient.patch<ApiInvoice>(
+    const { data } = await apiClient.patch<ApiInvoiceDoc>(
       `/invoices/${id}/send`,
       {},
     )
@@ -114,7 +116,7 @@ export async function markInvoicePaid(
   body?: { amountPaidCents?: number; notes?: string },
 ) {
   try {
-    const { data } = await apiClient.patch<ApiInvoice>(
+    const { data } = await apiClient.patch<ApiInvoiceDoc>(
       `/invoices/${id}/mark-paid`,
       body ?? {},
     )
@@ -126,7 +128,7 @@ export async function markInvoicePaid(
 
 export async function voidInvoice(id: string) {
   try {
-    const { data } = await apiClient.patch<ApiInvoice>(
+    const { data } = await apiClient.patch<ApiInvoiceDoc>(
       `/invoices/${id}/void`,
       {},
     )

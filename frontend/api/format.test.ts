@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest"
-import { formatNgn, shortId, minutesLeft, flattenInventory } from "./format"
+import {
+  formatMoney,
+  formatNgn,
+  shortId,
+  minutesLeft,
+  flattenInventory,
+} from "./format"
 import type { ApiProduct } from "./types"
 
-describe("formatNgn", () => {
-  it("formats kobo/cents as NGN without decimals (100 kobo = ₦1)", () => {
-    // 15_000 kobo = ₦150
+describe("formatMoney", () => {
+  it("formats minor units for multiple currencies", () => {
+    expect(formatMoney(15_000, "NGN")).toMatch(/150/)
+    expect(formatMoney(1_500_000, "NGN")).toMatch(/15/)
+    expect(formatMoney(1999, "USD")).toMatch(/19/)
+    expect(formatMoney(0, "EUR")).toMatch(/0/)
+  })
+
+  it("formatNgn remains a NGN convenience alias", () => {
     expect(formatNgn(15_000)).toMatch(/150/)
-    // 1_500_000 kobo = ₦15,000
-    expect(formatNgn(1_500_000)).toMatch(/15/)
-    expect(formatNgn(0)).toMatch(/0/)
   })
 })
 

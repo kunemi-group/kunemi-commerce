@@ -7,9 +7,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? [
+    // Include ShopFlow storefront origins via CORS_ORIGIN (comma-separated)
+    origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'http://localhost:3002',
     ],
     credentials: true,
   });

@@ -29,6 +29,18 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
+  /** Storage key (R2 or local) for primary product image */
+  @Column({ name: 'image_key', type: 'text', nullable: true })
+  imageKey!: string | null;
+
+  /** JSON string array of storage keys for gallery */
+  @Column({ name: 'gallery_keys_json', type: 'text', nullable: true })
+  galleryKeysJson!: string | null;
+
+  /** When true, product appears on ShopFlow storefront for this business */
+  @Column({ name: 'published_to_store', type: 'boolean', default: true })
+  publishedToStore!: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;
 

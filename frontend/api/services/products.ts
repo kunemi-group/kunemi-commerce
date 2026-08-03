@@ -4,6 +4,8 @@ import type { ApiProduct } from "../types"
 export type CreateProductPayload = {
   name: string
   description?: string
+  imageKey?: string
+  publishedToStore?: boolean
   variant?: {
     sku?: string
     priceCents: number
@@ -11,12 +13,16 @@ export type CreateProductPayload = {
     taxExempt?: boolean
     lowStockThreshold?: number
     attributes?: Record<string, string>
+    imageKey?: string
   }
 }
 
 export type UpdateProductPayload = {
   name?: string
   description?: string | null
+  imageKey?: string | null
+  galleryKeys?: string[] | null
+  publishedToStore?: boolean
 }
 
 export type VariantPayload = {
@@ -26,6 +32,7 @@ export type VariantPayload = {
   taxExempt?: boolean
   lowStockThreshold?: number
   attributes?: Record<string, string> | null
+  imageKey?: string | null
 }
 
 export async function listProducts() {

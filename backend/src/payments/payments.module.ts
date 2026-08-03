@@ -8,6 +8,10 @@ import { Payment } from '../database/entities/payment.entity';
 import { ProductVariant } from '../database/entities/product-variant.entity';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { BankTransferProvider } from './providers/bank-transfer.provider';
+import { PaymentProviderRegistry } from './providers/payment-provider.registry';
+import { PaystackProvider } from './providers/paystack.provider';
+import { StripeProvider } from './providers/stripe.provider';
 
 @Module({
   imports: [
@@ -21,7 +25,13 @@ import { PaymentsService } from './payments.service';
     ]),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
-  exports: [PaymentsService],
+  providers: [
+    PaymentsService,
+    BankTransferProvider,
+    StripeProvider,
+    PaystackProvider,
+    PaymentProviderRegistry,
+  ],
+  exports: [PaymentsService, PaymentProviderRegistry],
 })
 export class PaymentsModule {}

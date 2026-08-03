@@ -64,6 +64,11 @@ export type ApiProduct = {
   id: string
   name: string
   description: string | null
+  imageKey?: string | null
+  imageUrl?: string | null
+  galleryKeys?: string[]
+  galleryUrls?: string[]
+  publishedToStore?: boolean
   variants: Array<{
     id: string
     productId?: string
@@ -75,6 +80,8 @@ export type ApiProduct = {
     available: number
     taxExempt: boolean
     lowStockThreshold: number
+    imageKey?: string | null
+    imageUrl?: string | null
   }>
 }
 
@@ -149,7 +156,8 @@ export type AuthUser = {
   email: string
   fullName: string
   role: string
-  businessId: string
+  /** Null for ShopFlow buyers */
+  businessId: string | null
 }
 
 export type BusinessProfile = {
@@ -159,6 +167,12 @@ export type BusinessProfile = {
   email: string | null
   address: string | null
   tier: string
+  /** ISO 4217 — per business, not platform-locked to NGN */
+  currency?: string
+  payments?: {
+    defaultMethod: string
+    enabledMethods: string[]
+  }
   tax: {
     enabled: boolean
     ratePercent: number
@@ -173,6 +187,13 @@ export type BusinessProfile = {
     accountNumber: string | null
   }
   brandColor: string
+  store?: {
+    slug: string | null
+    enabled: boolean
+    publicPath: string | null
+  }
+  logoKey?: string | null
+  logoUrl?: string | null
   onboarding?: {
     complete: boolean
     missing: string[]
@@ -181,9 +202,131 @@ export type BusinessProfile = {
   inventoryOptional?: boolean
 }
 
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "expired"
+  | "converted"
+
+export type InvoiceDocStatus =
+  | "draft"
+  | "sent"
+  | "partial"
+  | "paid"
+  | "overdue"
+  | "void"
+
+export type ApiDocumentLine = {
+  id: string
+  variantId: string | null
+  description: string
+  quantity: number
+  unitPriceCents: number
+  taxExempt: boolean
+}
+
+export type ApiQuotation = {
+  id: string
+  reference: string
+  status: QuoteStatus
+  customerName: string
+  customerPhone: string | null
+  customerEmail: string | null
+  deliveryAddress: string | null
+  validUntil: string | null
+  channel: string
+  paymentMethods: Array<"transfer" | "card">
+  shippingFeeCents: number
+  taxCents: number
+  subtotalCents: number
+  totalCents: number
+  notes: string | null
+  convertedInvoiceId: string | null
+  ownerName: string | null
+  items: ApiDocumentLine[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type ApiInvoiceDoc = {
+  id: string
+  reference: string
+  status: InvoiceDocStatus
+  customerName: string
+  customerPhone: string | null
+  customerEmail: string | null
+  deliveryAddress: string | null
+  dueAt: string | null
+  channel: string
+  paymentMethods: Array<"transfer" | "card">
+  shippingFeeCents: number
+  taxCents: number
+  subtotalCents: number
+  totalCents: number
+  amountPaidCents: number
+  quotationId: string | null
+  orderId: string | null
+  notes: string | null
+  ownerName: string | null
+  items: ApiDocumentLine[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type CreateDocumentPayload = {
+  customerName: string
+  customerPhone?: string
+  customerEmail?: string
+  deliveryAddress?: string
+  shippingFeeCents?: number
+  notes?: string
+  channel?: "whatsapp" | "email" | "both"
+  paymentMethods?: Array<"transfer" | "card">
+  validUntil?: string
+  dueAt?: string
+  items: Array<{
+    variantId?: string
+    description: string
+    quantity: number
+    unitPriceCents: number
+    taxExempt?: boolean
+  }>
+}
+
+export type UploadResult = {
+  key: string
+  url: string
+  provider: "r2" | "local"
+  contentType: string
+  size: number
+  filename: string
+}
+
+export type PublicStoreProduct = {
+  id: string
+  name: string
+  description: string | null
+  imageUrl: string | null
+  galleryUrls: string[]
+  publishedToStore: boolean
+  fromPriceCents: number | null
+  variants: Array<{
+    id: string
+    sku: string | null
+    attributes: Record<string, string> | null
+    priceCents: number
+    available: number
+    taxExempt: boolean
+    imageUrl: string | null
+    inStock: boolean
+  }>
+}
+
 export type AuthMeResponse = {
   user: AuthUser
-  business: BusinessProfile
+  /** Null for ShopFlow buyers */
+  business: BusinessProfile | null
 }
 
 export type TokenResponse = {
@@ -194,6 +337,7 @@ export type TokenResponse = {
 export type PublicPayResponse = {
   token: string
   method: string
+  providerLabel?: string
   paymentStatus: string
   orderStatus: string
   reference: string
@@ -206,9 +350,13 @@ export type PublicPayResponse = {
   underReview: boolean
   paid: boolean
   rejectReason: string | null
+  checkoutUrl?: string | null
+  requiresManualClaim?: boolean
+  availablePaymentMethods?: Array<{ id: string; label: string; isDefault: boolean }>
   business: {
     name: string
     whatsapp: string | null
+    currency?: string
     bankName: string | null
     bankAccountName: string | null
     bankAccountNumber: string | null
@@ -268,94 +416,7 @@ export type CreateOrderPayload = {
   }>
 }
 
-export type QuoteStatus =
-  | "draft"
-  | "sent"
-  | "accepted"
-  | "expired"
-  | "converted"
-
-export type InvoiceStatus =
-  | "draft"
-  | "sent"
-  | "partial"
-  | "paid"
-  | "overdue"
-  | "void"
-
-export type DocumentLine = {
-  id: string
-  variantId: string | null
-  description: string
-  quantity: number
-  unitPriceCents: number
-  taxExempt: boolean
-}
-
-export type ApiQuotation = {
-  id: string
-  reference: string
-  status: QuoteStatus
-  customerName: string
-  customerPhone: string | null
-  customerEmail: string | null
-  deliveryAddress: string | null
-  validUntil: string | null
-  channel: string
-  paymentMethods: Array<"transfer" | "card">
-  shippingFeeCents: number
-  taxCents: number
-  subtotalCents: number
-  totalCents: number
-  notes: string | null
-  convertedInvoiceId: string | null
-  ownerName: string | null
-  items: DocumentLine[]
-  createdAt: string
-  updatedAt: string
-}
-
-export type ApiInvoice = {
-  id: string
-  reference: string
-  status: InvoiceStatus
-  customerName: string
-  customerPhone: string | null
-  customerEmail: string | null
-  deliveryAddress: string | null
-  dueAt: string | null
-  channel: string
-  paymentMethods: Array<"transfer" | "card">
-  shippingFeeCents: number
-  taxCents: number
-  subtotalCents: number
-  totalCents: number
-  amountPaidCents: number
-  quotationId: string | null
-  orderId: string | null
-  notes: string | null
-  ownerName: string | null
-  items: DocumentLine[]
-  createdAt: string
-  updatedAt: string
-}
-
-export type CreateDocumentPayload = {
-  customerName: string
-  customerPhone?: string
-  customerEmail?: string
-  deliveryAddress?: string
-  shippingFeeCents?: number
-  notes?: string
-  channel?: "whatsapp" | "email" | "both"
-  paymentMethods?: Array<"transfer" | "card">
-  validUntil?: string
-  dueAt?: string
-  items: Array<{
-    variantId?: string
-    description: string
-    quantity: number
-    unitPriceCents: number
-    taxExempt?: boolean
-  }>
-}
+/** Alias used by PDF map helpers */
+export type ApiInvoice = ApiInvoiceDoc
+export type InvoiceStatus = InvoiceDocStatus
+export type DocumentLine = ApiDocumentLine

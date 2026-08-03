@@ -50,6 +50,10 @@ export class ProductVariant {
   @Column({ name: 'tax_exempt', type: 'boolean', default: false })
   taxExempt!: boolean;
 
+  /** Optional variant-level image (falls back to product image) */
+  @Column({ name: 'image_key', type: 'text', nullable: true })
+  imageKey!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;
 }

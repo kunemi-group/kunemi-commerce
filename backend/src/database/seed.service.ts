@@ -47,6 +47,12 @@ export class SeedService implements OnModuleInit {
         bankAccountName: 'Lagos Threads Co.',
         bankAccountNumber: '0123456789',
         brandColor: '#4f6bed',
+        currency: 'NGN',
+        defaultPaymentMethod: 'bank_transfer',
+        enabledPaymentMethodsJson: '["bank_transfer"]',
+        storeSlug: 'lagos-threads',
+        storeEnabled: true,
+        logoKey: null,
       }),
     );
 
@@ -67,6 +73,9 @@ export class SeedService implements OnModuleInit {
         businessId: business.id,
         name: 'Ankara Maxi Dress',
         description: 'Demo catalog item',
+        imageKey: null,
+        galleryKeysJson: null,
+        publishedToStore: true,
       }),
     );
     await this.variants.save(
@@ -78,6 +87,7 @@ export class SeedService implements OnModuleInit {
         priceCents: 1850000,
         stockOnHand: 20,
         stockReserved: 0,
+        imageKey: null,
         taxExempt: false,
       }),
     );

@@ -43,6 +43,11 @@ export const navGroups: NavGroup[] = [
         icon: MessageSquare,
         href: "/workspace",
       },
+      {
+        label: "Inbox",
+        icon: MessageSquare,
+        href: "/inbox",
+      },
       { label: "Orders", icon: ShoppingCart, href: "/orders", badge: "86" },
       {
         label: "Inventory",

@@ -42,4 +42,13 @@ export const queryKeys = {
     list: () => [...queryKeys.invoices.all, "list"] as const,
     detail: (id: string) => [...queryKeys.invoices.all, "detail", id] as const,
   },
+  store: {
+    public: (slug: string) => ["store", slug] as const,
+    products: (slug: string) => ["store", slug, "products"] as const,
+  },
+  chat: {
+    all: ["chat"] as const,
+    inbox: () => [...queryKeys.chat.all, "inbox"] as const,
+    thread: (id: string) => [...queryKeys.chat.all, "thread", id] as const,
+  },
 }

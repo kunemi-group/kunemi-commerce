@@ -12,3 +12,5 @@ export { Quotation } from './quotation.entity';
 export { QuotationItem } from './quotation-item.entity';
 export { Invoice } from './invoice.entity';
 export { InvoiceItem } from './invoice-item.entity';
+export { ChatThread } from './chat-thread.entity';
+export { ChatMessage } from './chat-message.entity';

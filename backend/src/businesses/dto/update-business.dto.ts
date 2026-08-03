@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsEmail,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -70,4 +71,36 @@ export class UpdateBusinessDto {
     message: 'brandColor must be a hex color like #4f6bed',
   })
   brandColor?: string;
+
+  /** ShopFlow store slug (lowercase letters, numbers, hyphens) */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    message: 'storeSlug must be lowercase alphanumeric with hyphens',
+  })
+  storeSlug?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  storeEnabled?: boolean;
+
+  /** Storage key for logo uploaded via POST /uploads purpose=brand */
+  @IsOptional()
+  @IsString()
+  logoKey?: string | null;
+
+  /** ISO 4217 currency code (e.g. NGN, USD, GBP, EUR, KES) */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z]{3}$/, { message: 'currency must be a 3-letter ISO code' })
+  currency?: string;
+
+  /** bank_transfer | stripe | paystack (default payment method) */
+  @IsOptional()
+  @IsString()
+  @IsIn(['bank_transfer', 'stripe', 'paystack'])
+  defaultPaymentMethod?: string;
+
+  @IsOptional()
+  enabledPaymentMethods?: string[];
 }

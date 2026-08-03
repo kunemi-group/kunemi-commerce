@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import type { AuthUser } from '../common/types/auth-user';
 import { Product } from '../database/entities/product.entity';
 import { ProductVariant } from '../database/entities/product-variant.entity';
+import { StorageService } from '../storage/storage.service';
 import {
   AddVariantDto,
   CreateProductDto,
@@ -18,6 +19,7 @@ import {
 
 /**
  * Optional catalog. Empty list is a valid merchant state.
+ * Products can be published to ShopFlow via storefront API.
  */
 @Injectable()
 export class InventoryService {
@@ -26,6 +28,7 @@ export class InventoryService {
     private readonly products: Repository<Product>,
     @InjectRepository(ProductVariant)
     private readonly variants: Repository<ProductVariant>,
+    private readonly storage: StorageService,
   ) {}
 
   async listProducts(user: AuthUser) {
@@ -50,6 +53,9 @@ export class InventoryService {
       businessId: user.businessId,
       name: dto.name,
       description: dto.description ?? null,
+      imageKey: dto.imageKey ?? null,
+      galleryKeysJson: null,
+      publishedToStore: dto.publishedToStore ?? true,
     });
     await this.products.save(product);
 
@@ -65,6 +71,7 @@ export class InventoryService {
         stockReserved: 0,
         taxExempt: dto.variant.taxExempt ?? false,
         lowStockThreshold: dto.variant.lowStockThreshold ?? 5,
+        imageKey: null,
       });
       await this.variants.save(variant);
     }
@@ -78,6 +85,21 @@ export class InventoryService {
     if (dto.name !== undefined) product.name = dto.name.trim();
     if (dto.description !== undefined) {
       product.description = dto.description?.trim() || null;
+    }
+    if (dto.imageKey !== undefined) {
+      if (dto.imageKey === null && product.imageKey) {
+        await this.storage.delete(product.imageKey);
+      }
+      product.imageKey = dto.imageKey;
+    }
+    if (dto.galleryKeys !== undefined) {
+      product.galleryKeysJson =
+        dto.galleryKeys === null
+          ? null
+          : JSON.stringify(dto.galleryKeys.filter(Boolean));
+    }
+    if (dto.publishedToStore !== undefined) {
+      product.publishedToStore = dto.publishedToStore;
     }
     await this.products.save(product);
     return this.toProductDto(product);
@@ -95,6 +117,7 @@ export class InventoryService {
       stockReserved: 0,
       taxExempt: dto.taxExempt ?? false,
       lowStockThreshold: dto.lowStockThreshold ?? 5,
+      imageKey: dto.imageKey ?? null,
     });
     await this.variants.save(variant);
     return this.toVariantDto(variant);
@@ -109,6 +132,12 @@ export class InventoryService {
       variant.lowStockThreshold = dto.lowStockThreshold;
     }
     if (dto.attributes !== undefined) variant.attributes = dto.attributes;
+    if (dto.imageKey !== undefined) {
+      if (dto.imageKey === null && variant.imageKey) {
+        await this.storage.delete(variant.imageKey);
+      }
+      variant.imageKey = dto.imageKey;
+    }
     await this.variants.save(variant);
     return this.toVariantDto(variant);
   }
@@ -163,10 +192,18 @@ export class InventoryService {
   }
 
   private toProductDto(p: Product) {
+    const galleryKeys = this.parseGallery(p.galleryKeysJson);
     return {
       id: p.id,
       name: p.name,
       description: p.description,
+      imageKey: p.imageKey,
+      imageUrl: this.storage.publicUrl(p.imageKey),
+      galleryKeys,
+      galleryUrls: galleryKeys
+        .map((k) => this.storage.publicUrl(k))
+        .filter(Boolean),
+      publishedToStore: p.publishedToStore,
       variants: (p.variants ?? []).map((v) => this.toVariantDto(v)),
     };
   }
@@ -183,6 +220,18 @@ export class InventoryService {
       available: v.stockOnHand - v.stockReserved,
       taxExempt: v.taxExempt,
       lowStockThreshold: v.lowStockThreshold,
+      imageKey: v.imageKey,
+      imageUrl: this.storage.publicUrl(v.imageKey),
     };
+  }
+
+  private parseGallery(json: string | null): string[] {
+    if (!json) return [];
+    try {
+      const arr = JSON.parse(json) as string[];
+      return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
   }
 }

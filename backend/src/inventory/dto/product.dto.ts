@@ -48,6 +48,14 @@ export class CreateProductDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  imageKey?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  publishedToStore?: boolean;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => CreateVariantDto)
   variant?: CreateVariantDto;
@@ -62,6 +70,17 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  imageKey?: string | null;
+
+  @IsOptional()
+  galleryKeys?: string[] | null;
+
+  @IsOptional()
+  @IsBoolean()
+  publishedToStore?: boolean;
 }
 
 export class UpdateVariantDto {
@@ -86,6 +105,10 @@ export class UpdateVariantDto {
   @IsOptional()
   @IsObject()
   attributes?: Record<string, string> | null;
+
+  @IsOptional()
+  @IsString()
+  imageKey?: string | null;
 }
 
 /** Add stock (or subtract if negative) without clobbering reserved units. */
@@ -120,5 +143,9 @@ export class AddVariantDto {
   @IsOptional()
   @IsObject()
   attributes?: Record<string, string>;
+
+  @IsOptional()
+  @IsString()
+  imageKey?: string;
 }
 

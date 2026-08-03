@@ -52,6 +52,13 @@ export function SettingsPanel() {
   const [taxRate, setTaxRate] = useState(7.5)
   const [shippingNaira, setShippingNaira] = useState(2500)
   const [brandColor, setBrandColor] = useState("#4f6bed")
+  const [storeSlug, setStoreSlug] = useState("")
+  const [storeEnabled, setStoreEnabled] = useState(true)
+  const [currency, setCurrency] = useState("NGN")
+  const [defaultPaymentMethod, setDefaultPaymentMethod] =
+    useState("bank_transfer")
+  const [logoKey, setLogoKey] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -70,6 +77,12 @@ export function SettingsPanel() {
     setTaxRate(Number(business.tax.ratePercent) || 0)
     setShippingNaira(Math.round((business.shipping.defaultFeeCents ?? 0) / 100))
     setBrandColor(business.brandColor || branding.brandColor || "#4f6bed")
+    setStoreSlug(business.store?.slug ?? "")
+    setStoreEnabled(business.store?.enabled ?? true)
+    setCurrency(business.currency ?? "NGN")
+    setDefaultPaymentMethod(business.payments?.defaultMethod ?? "bank_transfer")
+    setLogoKey(business.logoKey ?? null)
+    setLogoUrl(business.logoUrl ?? null)
     // Sync local branding defaults from server
     branding.setBranding({
       brandColor: business.brandColor || branding.brandColor,
@@ -79,9 +92,10 @@ export function SettingsPanel() {
       defaultShippingFeeNaira: Math.round(
         (business.shipping.defaultFeeCents ?? 0) / 100,
       ),
+      logoDataUrl: business.logoUrl ?? branding.logoDataUrl,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per business load
-  }, [business?.id, business?.name, business?.bank.accountNumber])
+  }, [business?.id, business?.name, business?.bank.accountNumber, business?.store?.slug])
 
   async function saveProfile() {
     setSaving("profile")
@@ -153,12 +167,73 @@ export function SettingsPanel() {
   async function onLogoSelected(file: File | null) {
     if (!file) return
     if (!file.type.startsWith("image/")) return
-    if (file.size > 1.5 * 1024 * 1024) {
-      window.alert("Please use an image under 1.5MB for the logo.")
+    if (file.size > 8 * 1024 * 1024) {
+      window.alert("Please use an image under 8MB for the logo.")
       return
     }
-    const dataUrl = await fileToDataUrl(file)
-    branding.setBranding({ logoDataUrl: dataUrl })
+    setSaving("logo")
+    setError(null)
+    setMessage(null)
+    try {
+      const { uploadFile } = await import("@/api")
+      const stored = await uploadFile(file, "brand")
+      await updateBusiness({ logoKey: stored.key })
+      setLogoKey(stored.key)
+      setLogoUrl(stored.url)
+      branding.setBranding({ logoDataUrl: stored.url })
+      await refresh()
+      setMessage("Logo uploaded to storage")
+    } catch (e) {
+      // Fallback: local-only branding if upload API fails
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        branding.setBranding({ logoDataUrl: dataUrl })
+        setMessage("Logo saved locally (upload API unavailable)")
+      } catch {
+        setError(e instanceof Error ? e.message : "Logo upload failed")
+      }
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  async function saveStore() {
+    setSaving("store")
+    setError(null)
+    setMessage(null)
+    try {
+      await updateBusiness({
+        storeSlug: storeSlug.trim().toLowerCase() || null,
+        storeEnabled,
+      })
+      await refresh()
+      setMessage("ShopFlow storefront settings saved")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed")
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  async function saveCurrencyPayments() {
+    setSaving("currency")
+    setError(null)
+    setMessage(null)
+    try {
+      await updateBusiness({
+        currency: currency.trim().toUpperCase(),
+        defaultPaymentMethod,
+        enabledPaymentMethods: ["bank_transfer", defaultPaymentMethod].filter(
+          (v, i, a) => a.indexOf(v) === i,
+        ),
+      })
+      await refresh()
+      setMessage("Currency and payment defaults saved")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed")
+    } finally {
+      setSaving(null)
+    }
   }
 
   const tier = (business?.tier ?? "starter") as SubscriptionTier
@@ -200,7 +275,6 @@ export function SettingsPanel() {
             <Field label="Business name" value={name} onChange={setName} />
             <Field label="Support email" value={email} onChange={setEmail} />
             <Field label="WhatsApp business number" value={whatsapp} onChange={setWhatsapp} />
-            <Field label="Currency" value="NGN" onChange={() => {}} disabled />
             <div className="sm:col-span-2">
               <Field label="Pickup / storefront address" value={address} onChange={setAddress} />
             </div>
@@ -214,6 +288,131 @@ export function SettingsPanel() {
                   </Badge>
                 ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 border-b border-border pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="size-4 text-primary" />
+                Currency & payments
+              </CardTitle>
+              <CardDescription>
+                Global business currency (ISO). Default payment is bank transfer; Stripe/Paystack can plug in later.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!!saving}
+              onClick={() => void saveCurrencyPayments()}
+            >
+              {saving === "currency" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              Save
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                Currency
+              </span>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {[
+                  "NGN",
+                  "USD",
+                  "GBP",
+                  "EUR",
+                  "GHS",
+                  "KES",
+                  "ZAR",
+                  "XOF",
+                  "XAF",
+                  "CAD",
+                  "AUD",
+                  "INR",
+                ].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                Default payment method
+              </span>
+              <select
+                value={defaultPaymentMethod}
+                onChange={(e) => setDefaultPaymentMethod(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="bank_transfer">Bank transfer (default)</option>
+                <option value="stripe" disabled>
+                  Stripe (coming soon)
+                </option>
+                <option value="paystack" disabled>
+                  Paystack (coming soon)
+                </option>
+              </select>
+            </label>
+            <p className="sm:col-span-2 text-xs text-muted-foreground">
+              Amounts are stored in minor units for this currency. Card gateways
+              plug into the same payment interface without a second backend.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 border-b border-border pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="size-4 text-primary" />
+                ShopFlow storefront
+              </CardTitle>
+              <CardDescription>
+                Public catalog API for ShopFlow social store — Workspace is the backend of record
+              </CardDescription>
+            </div>
+            <Button size="sm" className="gap-2" disabled={!!saving} onClick={() => void saveStore()}>
+              {saving === "store" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              Save store
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
+            <Field
+              label="Store slug"
+              value={storeSlug}
+              onChange={setStoreSlug}
+              placeholder="lagos-threads"
+            />
+            <label className="flex items-center gap-2 self-end pb-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={storeEnabled}
+                onChange={(e) => setStoreEnabled(e.target.checked)}
+                className="size-3.5 rounded border-border"
+              />
+              Store enabled
+            </label>
+            <div className="sm:col-span-2 rounded-lg border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Public endpoints for ShopFlow</p>
+              <p className="mt-1 font-mono">
+                GET /api/store/{storeSlug || "{slug}"}
+              </p>
+              <p className="font-mono">
+                GET /api/store/{storeSlug || "{slug}"}/products
+              </p>
+              <p className="mt-2">
+                Products with “Publish to ShopFlow store” appear here. Images use R2 when configured.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -241,12 +440,14 @@ export function SettingsPanel() {
           </CardHeader>
           <CardContent className="grid gap-5 pt-4 sm:grid-cols-2">
             <div className="space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">Logo (browser only)</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Logo (Cloudflare R2 / storage)
+              </p>
               <div className="flex items-center gap-3">
-                {branding.logoDataUrl ? (
+                {logoUrl || branding.logoDataUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={branding.logoDataUrl}
+                    src={logoUrl || branding.logoDataUrl || ""}
                     alt="Business logo"
                     className="size-14 rounded-xl object-cover ring-1 ring-border"
                   />
@@ -262,7 +463,7 @@ export function SettingsPanel() {
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg,image/webp"
                     className="hidden"
                     onChange={(e) => void onLogoSelected(e.target.files?.[0] ?? null)}
                   />
@@ -270,17 +471,29 @@ export function SettingsPanel() {
                     size="sm"
                     variant="outline"
                     className="gap-2 bg-card"
+                    disabled={!!saving}
                     onClick={() => fileRef.current?.click()}
                   >
-                    <ImagePlus className="size-4" />
+                    {saving === "logo" ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ImagePlus className="size-4" />
+                    )}
                     Upload logo
                   </Button>
-                  {branding.logoDataUrl ? (
+                  {logoKey || branding.logoDataUrl ? (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="gap-2 text-destructive"
-                      onClick={() => branding.setBranding({ logoDataUrl: null })}
+                      onClick={() => {
+                        void updateBusiness({ logoKey: null }).then(() => {
+                          setLogoKey(null)
+                          setLogoUrl(null)
+                          branding.setBranding({ logoDataUrl: null })
+                          return refresh()
+                        })
+                      }}
                     >
                       <Trash2 className="size-4" />
                       Remove

@@ -43,6 +43,7 @@ export class RlsService implements OnModuleInit {
       'payments',
       'quotations',
       'invoices',
+      'chat_threads',
     ];
 
     // ENABLE only (not FORCE) so the table owner (app role) can seed/migrate.
@@ -59,6 +60,7 @@ export class RlsService implements OnModuleInit {
       'delivery_status_events',
       'quotation_items',
       'invoice_items',
+      'chat_messages',
     ]) {
       await this.dataSource.query(
         `ALTER TABLE IF EXISTS ${table} ENABLE ROW LEVEL SECURITY`,
@@ -88,6 +90,7 @@ export class RlsService implements OnModuleInit {
       'payments',
       'quotations',
       'invoices',
+      'chat_threads',
     ];
     for (const table of directBiz) {
       const policy = `tenant_${table}`;
@@ -134,6 +137,45 @@ export class RlsService implements OnModuleInit {
             SELECT 1 FROM invoices i
             WHERE i.id = invoice_items.invoice_id
               AND i.business_id::text = current_setting('app.current_business_id', true)
+          )
+        )
+    `);
+
+    // Chat: staff via business GUC; buyers via user GUC (set in tenant interceptor)
+    await drop('tenant_chat_threads', 'chat_threads');
+    await this.dataSource.query(`
+      CREATE POLICY tenant_chat_threads ON chat_threads
+        USING (
+          business_id::text = current_setting('app.current_business_id', true)
+          OR buyer_user_id::text = current_setting('app.current_user_id', true)
+        )
+        WITH CHECK (
+          business_id::text = current_setting('app.current_business_id', true)
+          OR buyer_user_id::text = current_setting('app.current_user_id', true)
+        )
+    `);
+
+    await drop('tenant_chat_messages', 'chat_messages');
+    await this.dataSource.query(`
+      CREATE POLICY tenant_chat_messages ON chat_messages
+        USING (
+          EXISTS (
+            SELECT 1 FROM chat_threads t
+            WHERE t.id = chat_messages.thread_id
+              AND (
+                t.business_id::text = current_setting('app.current_business_id', true)
+                OR t.buyer_user_id::text = current_setting('app.current_user_id', true)
+              )
+          )
+        )
+        WITH CHECK (
+          EXISTS (
+            SELECT 1 FROM chat_threads t
+            WHERE t.id = chat_messages.thread_id
+              AND (
+                t.business_id::text = current_setting('app.current_business_id', true)
+                OR t.buyer_user_id::text = current_setting('app.current_user_id', true)
+              )
           )
         )
     `)

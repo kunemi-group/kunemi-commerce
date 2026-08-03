@@ -12,8 +12,13 @@ import { Business } from './business.entity';
 import { Order } from './order.entity';
 import { User } from './user.entity';
 
-/** Default path is bank transfer; card gateway can be added later. */
-export type PaymentMethod = 'bank_transfer' | 'card';
+/** Pluggable methods — bank_transfer default; stripe/paystack later. */
+export type PaymentMethod =
+  | 'bank_transfer'
+  | 'card'
+  | 'stripe'
+  | 'paystack'
+  | string;
 
 export type PaymentStatus =
   | 'awaiting_transfer'

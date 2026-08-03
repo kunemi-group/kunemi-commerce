@@ -5,7 +5,20 @@
 **Repo:** https://github.com/kunemi-group/kunemi-commerce.git  
 **Note:** `docs/` is gitignored (local confidential product docs only).
 
-**Current state:** Multi-tenant NestJS API on Docker Postgres (JWT, orders, optional inventory, bank-transfer payments, deliveries, tracking, **quotations/invoices**, RLS) with Next.js UI largely wired via **Axios + TanStack Query**. Phase 1 commerce + documents loop works; messaging and AI remain UI-only.
+**Current state:** Multi-tenant NestJS API on Docker Postgres (JWT, orders, optional inventory, bank-transfer payments, deliveries, tracking, **quotations/invoices**, **Cloudflare R2 storage**, **ShopFlow public store catalog**, RLS) with Next.js UI largely wired via **Axios + TanStack Query**. Phase 1 commerce + documents + store backend ready; messaging and AI remain UI-only.
+
+### Architecture lock (one backend)
+
+- **One NestJS backend** for Kunemi Workspace + ShopFlow (no second commerce API).
+- **Workspace** = independent **business store platform**. Sellers/business access **everything** here (catalog, products, orders, pay, team, analytics, chat inbox). Works without ShopFlow.
+- **ShopFlow** = **buyer/users only** frontend (+ mobile later) on the same API.
+  - **Sellers / businesses cannot log into ShopFlow** — no seller mode, no seller dashboard, no seller chat there.
+  - Reason: all business operations live in Workspace; ShopFlow is the consumer surface only.
+- **Chat:** buyers message in ShopFlow; sellers reply in Workspace (shared chat API).
+- **Global (locked):**
+  - Workspace is **not NGN-only** — per-business **ISO currency** + integer minor units; locale-aware display.
+  - Payments are **pluggable**: default **bank transfer** (business account details); later **Stripe / Paystack** etc. behind the same order/payment state machine.
+- Detail: `docs/Architecture_One_Backend.md` (local docs/).
 
 ### How to run
 
@@ -42,11 +55,13 @@ pnpm test           # Vitest (api layer + totals)
 | Product create / edit / variant / restock / delete UI | **Done** |
 | Sales team home widget | **Live roster** (no fake conversion metrics) |
 | Quotations / invoices | **Done** — API + create/list/status + PDF preview |
+| Cloudflare R2 storage | **Done** — uploads + media serve; local fallback |
+| ShopFlow public catalog | **Done** — `GET /api/store/:slug/products` |
 | Team invite / RBAC mutations | **Done** — invite, role change, remove + RolesGuard |
 | AI agent runtime | **UI placeholder** |
-| Integrations (WA/IG, card gateway, courier APIs) | **Not started** |
+| Integrations (WA/IG, card gateway, courier APIs) | **Not started** (ShopFlow store **read API** ready) |
 
-**Rough completion:** backend Phase 1 ~**95%** · frontend live-wired ~**90%**
+**Rough completion:** backend Phase 1 ~**97%** · frontend live-wired ~**92%**
 
 ---
 
@@ -159,11 +174,19 @@ pnpm test           # Vitest (api layer + totals)
 
 ### P2 — Integrations
 
-- [ ] Card gateway webhooks (secondary payment method)
+- [x] Cloudflare R2 for images / proofs / document files (local fallback when unset)
+- [x] Public ShopFlow catalog API (`/api/store/:slug…`)
+- [ ] ShopFlow checkout → Workspace order create (write path)
+- [x] Buyer user accounts on same auth API (`role: buyer`, no businessId)
+- [x] Chat module (shared API): buyer endpoints + Workspace `/inbox` UI
+- [x] Multi-currency foundation: `business.currency` (ISO), formatMoney helpers, settings picker
+- [x] PaymentProvider registry (bank_transfer live; Stripe/Paystack stubs)
+- [ ] Wire all UI call sites off `formatNgn` → `formatMoney(..., business.currency)`
+- [ ] Card gateway webhooks (Stripe/Paystack) as secondary methods behind provider interface
 - [ ] Courier API providers + webhooks (manual fulfillment already works)
-- [ ] Messaging inbox (WA/IG) — replace workspace open-chats mock
+- [ ] External messaging (WA/IG) — separate from in-app ShopFlow↔Workspace chat
 - [ ] Cloudflare Worker (or equivalent) edge webhook ingestion
-- [ ] Notification center (expiring holds, payment claims, delivery events)
+- [ ] Notification center (expiring holds, payment claims, delivery events, chat)
 
 ### P3 — AI Agents (deferred by design)
 
@@ -191,9 +214,12 @@ pnpm test           # Vitest (api layer + totals)
 6. ~~Product CRUD UI + live dashboard charts~~  
 7. ~~Quotes / invoices backend + wire documents~~  
 8. ~~Team invite / RBAC~~  
-9. **Messaging inbox (WA/IG)**  
-10. Card gateway / courier APIs (optional)  
-11. AI agent design (separate from human Sales Team)
+9. ~~Cloudflare R2 + ShopFlow public catalog~~  
+10. ~~Buyer auth + chat API (buyer endpoints + Workspace inbox)~~  
+11. **ShopFlow buyer FE + checkout → Workspace orders**  
+12. External messaging (WA/IG)  
+13. Card gateway / courier APIs (optional)  
+14. AI agent design (separate from human Sales Team)
 
 ---
 
@@ -209,6 +235,11 @@ pnpm test           # Vitest (api layer + totals)
 | Create quote/invoice drawer | `frontend/components/dashboard/create-document-drawer.tsx` |
 | Team invite / roles | `backend/src/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
 | Roles guard | `backend/src/common/guards/roles.guard.ts` |
+| Chat API + Workspace inbox | `backend/src/chat/`, `frontend/app/inbox/` |
+| Buyer auth | `POST /api/auth/buyer/register`, `POST /api/auth/buyer/login` |
+| R2 / uploads | `backend/src/storage/` |
+| ShopFlow store API | `backend/src/store/` |
+| Upload client | `frontend/api/services/uploads.ts` |
 | Auth session | `frontend/lib/auth-context.tsx` |
 | Remaining mock domain data | `frontend/lib/data.ts` |
 | VAT + shipping totals | `frontend/lib/pdf/totals.ts` |

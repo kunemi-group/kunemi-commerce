@@ -17,8 +17,9 @@ import {
 import type { AuthUser } from '../types/auth-user';
 
 /**
- * Sets Postgres session GUC for RLS when using Postgres:
- *   set_config('app.current_business_id', '<uuid>', false)
+ * Sets Postgres session GUCs for RLS:
+ *   app.current_business_id — staff tenant scope
+ *   app.current_user_id — buyer chat scope (and general identity)
  * Cleared after the request. Skipped for SQLite.
  */
 @Injectable()
@@ -35,23 +36,37 @@ export class TenantContextInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<{ user?: AuthUser }>();
-    const businessId = req.user?.businessId;
-    if (!businessId || !this.dataSource.isInitialized || !this.isPostgres) {
+    const user = req.user;
+    if (!user || !this.dataSource.isInitialized || !this.isPostgres) {
       return next.handle();
     }
 
+    const businessId = user.businessId || '';
+    const userId = user.sub || '';
+
     return from(
-      this.dataSource.query(
-        `SELECT set_config('app.current_business_id', $1, false)`,
-        [businessId],
-      ),
+      Promise.all([
+        this.dataSource.query(
+          `SELECT set_config('app.current_business_id', $1, false)`,
+          [businessId],
+        ),
+        this.dataSource.query(
+          `SELECT set_config('app.current_user_id', $1, false)`,
+          [userId],
+        ),
+      ]),
     ).pipe(
       catchError(() => of(null)),
       switchMap(() => next.handle()),
       finalize(() => {
-        void this.dataSource
-          .query(`SELECT set_config('app.current_business_id', '', false)`)
-          .catch(() => undefined);
+        void Promise.all([
+          this.dataSource.query(
+            `SELECT set_config('app.current_business_id', '', false)`,
+          ),
+          this.dataSource.query(
+            `SELECT set_config('app.current_user_id', '', false)`,
+          ),
+        ]).catch(() => undefined);
       }),
     );
   }

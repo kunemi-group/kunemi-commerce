@@ -96,6 +96,48 @@ JWT carries `businessId`. A tenant interceptor sets Postgres GUC `app.current_bu
 | POST | `/api/deliveries` | JWT | Create delivery (order must be `paid`) |
 | PATCH | `/api/deliveries/:id/status` | JWT | Manual lifecycle transitions |
 | GET | `/api/tracking/:token` | public | Customer tracking (bypasses RLS via definer fns) |
+| POST | `/api/uploads` | JWT | Base64 upload → Cloudflare R2 (or local `uploads/`) |
+| GET | `/api/media/:token` | public | Serve stored object (product images, logos, proofs) |
+| GET | `/api/storage/status` | JWT | R2 vs local provider status |
+| GET | `/api/store/:slug` | public | **ShopFlow** storefront business profile |
+| GET | `/api/store/:slug/products` | public | **ShopFlow** published catalog |
+| GET | `/api/store/:slug/products/:id` | public | **ShopFlow** product detail |
+| GET/POST | `/api/quotations` | JWT | Quotes list/create |
+| PATCH | `/api/quotations/:id/send\|accept` | JWT | Quote lifecycle |
+| POST | `/api/quotations/:id/convert-to-invoice` | JWT | Quote → invoice |
+| GET/POST | `/api/invoices` | JWT | Invoices list/create |
+| PATCH | `/api/invoices/:id/send\|mark-paid\|void` | JWT | Invoice lifecycle |
+
+## Cloudflare R2 storage
+
+Kunemi Workspace stores **product images**, **brand logos**, **payment proofs**, and **document files** in Cloudflare R2 (S3-compatible).  
+If R2 env vars are missing, the API falls back to local `backend/uploads/` (dev only).
+
+```env
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=kunemi-workspace
+R2_PUBLIC_URL=https://cdn.yourdomain.com   # optional public CDN/custom domain
+API_PUBLIC_URL=http://localhost:3001/api     # used when R2_PUBLIC_URL is unset
+```
+
+Keys are namespaced: `businesses/{businessId}/{purpose}/...`  
+Public media URL: `GET /api/media/{base64url(key)}` (or `R2_PUBLIC_URL/{key}` when set).
+
+## ShopFlow storefront (Workspace as backend)
+
+Kunemi Workspace is the **system of record**. ShopFlow (social ecommerce store) reads published products:
+
+```bash
+# Business store profile
+curl -s http://localhost:3001/api/store/lagos-threads
+
+# Catalog (products with publishedToStore=true)
+curl -s http://localhost:3001/api/store/lagos-threads/products
+```
+
+Owners set **store slug** in Settings. Products toggle **Publish to ShopFlow store** in Inventory.
 
 ### Freeform order (no inventory)
 
