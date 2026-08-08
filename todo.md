@@ -58,7 +58,8 @@ pnpm test           # Vitest (api layer + totals)
 | Cloudflare R2 storage | **Done** — uploads + media serve; local fallback |
 | ShopFlow public catalog | **Done** — `GET /api/store/:slug/products` |
 | Team invite / RBAC mutations | **Done** — invite, role change, remove + RolesGuard |
-| AI agent runtime | **UI placeholder** |
+| Cloudflare Edge Platform Router | **Done** — `cloudflare-platform` Worker + KV domain lookup |
+| Platform Super Admin Module | **Done** — `super_admin` role, GMV metrics, store suspension, vanity domains, `/admin` UI |
 | Integrations (WA/IG, card gateway, courier APIs) | **Not started** (ShopFlow store **read API** ready) |
 
 **Rough completion:** backend Phase 1 ~**97%** · frontend live-wired ~**92%**

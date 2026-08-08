@@ -52,6 +52,11 @@ export class TenantContextInterceptor implements NestInterceptor {
       ? req.headers['x-tenant-id']
       : '';
 
+    // Super Admin bypasses single-tenant RLS to access cross-tenant data
+    if (user?.role === 'super_admin') {
+      return next.handle();
+    }
+
     const businessId = user?.businessId || edgeTenantId || '';
     const userId = user?.sub || '';
 
