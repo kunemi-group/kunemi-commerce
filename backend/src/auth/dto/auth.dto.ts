@@ -28,18 +28,18 @@ export class RegisterDto {
   whatsappNumber?: string;
 }
 
-/** ShopFlow: buyer only (no business) */
-export class RegisterBuyerDto {
-  @ApiProperty({ example: 'buyer@example.com', description: 'Buyer Email Address' })
+/** ShopFlow: end user only (no business) */
+export class RegisterUserDto {
+  @ApiProperty({ example: 'user@example.com', description: 'User Email Address' })
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: 'buyerpass123', description: 'Buyer Account Password' })
+  @ApiProperty({ example: 'userpass123', description: 'User Account Password' })
   @IsString()
   @MinLength(6)
   password!: string;
 
-  @ApiProperty({ example: 'Chidi Okafor', description: 'Buyer Full Name' })
+  @ApiProperty({ example: 'Chidi Okafor', description: 'User Full Name' })
   @IsString()
   @MinLength(2)
   fullName!: string;

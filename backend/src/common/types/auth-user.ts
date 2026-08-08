@@ -4,7 +4,7 @@ export type JwtPayload = {
   sub: string;
   /**
    * Business id for Workspace staff.
-   * Empty string for ShopFlow buyers (never a real UUID).
+   * Empty string for ShopFlow end users (never a real UUID).
    */
   businessId: string;
   role: UserRole;
@@ -22,8 +22,16 @@ export function isStaff(user: AuthUser): boolean {
   );
 }
 
+export function isUser(user: AuthUser): boolean {
+  return user.role === 'user';
+}
+
 export function isBuyer(user: AuthUser): boolean {
-  return user.role === 'buyer';
+  return user.role === 'user';
+}
+
+export function isSuperAdmin(user: AuthUser): boolean {
+  return user.role === 'super_admin';
 }
 
 /** Staff-only business scope — throws conceptually at call sites that need a real id */

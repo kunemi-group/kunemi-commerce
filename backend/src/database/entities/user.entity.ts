@@ -10,8 +10,8 @@ import {
 import { dateTimeType } from '../column-types';
 import { Business } from './business.entity';
 
-/** Staff use Workspace; buyers use ShopFlow only (no businessId). super_admin manages platform */
-export type UserRole = 'owner' | 'manager' | 'sales' | 'ops' | 'buyer' | 'super_admin';
+/** Staff use Workspace; end users use ShopFlow (no businessId); super_admin manages platform */
+export type UserRole = 'owner' | 'manager' | 'sales' | 'ops' | 'user' | 'super_admin';
 
 @Entity('users')
 @Unique(['businessId', 'email'])
@@ -19,7 +19,7 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  /** Null for ShopFlow buyers; required for Workspace staff */
+  /** Null for end users; required for Workspace staff */
   @Column({ name: 'business_id', type: 'uuid', nullable: true })
   businessId!: string | null;
 

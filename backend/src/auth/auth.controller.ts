@@ -1,43 +1,81 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterBuyerDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterUserDto, RegisterDto } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  /** Workspace: create business + owner */
+  /** Workspace: create business + owner account */
   @Public()
   @Post('register')
   register(@Body() body: RegisterDto) {
     return this.auth.register(body);
   }
 
-  /** Workspace staff login only (buyers rejected) */
+  /** Business/Seller registration endpoint */
+  @Public()
+  @Post('business/register')
+  registerBusiness(@Body() body: RegisterDto) {
+    return this.auth.register(body);
+  }
+
+  /** Business/Seller login endpoint */
   @Public()
   @Post('login')
   login(@Body() body: LoginDto) {
-    return this.auth.loginWorkspace(body);
+    return this.auth.businessLogin(body);
   }
 
-  /** ShopFlow: buyer registration */
+  /** Business/Seller login explicit route */
+  @Public()
+  @Post('business/login')
+  businessLogin(@Body() body: LoginDto) {
+    return this.auth.businessLogin(body);
+  }
+
+  /** ShopFlow / End User registration */
+  @Public()
+  @Post('user/register')
+  registerUser(@Body() body: RegisterUserDto) {
+    return this.auth.registerUser(body);
+  }
+
+  /** Legacy alias for buyer registration */
   @Public()
   @Post('buyer/register')
-  registerBuyer(@Body() body: RegisterBuyerDto) {
-    return this.auth.registerBuyer(body);
+  registerBuyer(@Body() body: RegisterUserDto) {
+    return this.auth.registerUser(body);
   }
 
-  /** ShopFlow: buyer login only (staff rejected) */
+  /** ShopFlow / End User login */
+  @Public()
+  @Post('user/login')
+  userLogin(@Body() body: LoginDto) {
+    return this.auth.userLogin(body);
+  }
+
+  /** Legacy alias for buyer login */
   @Public()
   @Post('buyer/login')
   loginBuyer(@Body() body: LoginDto) {
-    return this.auth.loginBuyer(body);
+    return this.auth.userLogin(body);
   }
 
-  /** Session bootstrap — staff get business; buyers get business: null */
+  /** Super Admin login endpoint */
+  @Public()
+  @Post('admin/login')
+  adminLogin(@Body() body: LoginDto) {
+    return this.auth.adminLogin(body);
+  }
+
+  /** Session bootstrap */
+  @ApiBearerAuth('JWT-auth')
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user);

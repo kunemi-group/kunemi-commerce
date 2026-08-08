@@ -15,7 +15,7 @@ import { onboardingStatus } from '../common/onboarding';
 import { normalizeCurrency } from '../common/currency';
 import { StorageService } from '../storage/storage.service';
 import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
-import { LoginDto, RegisterBuyerDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterUserDto, RegisterDto } from './dto/auth.dto';
 
 function slugify(name: string) {
   const base = name
@@ -93,8 +93,8 @@ export class AuthService {
     return this.tokenResponse(user);
   }
 
-  /** ShopFlow buyer registration — no business, no Workspace access */
-  async registerBuyer(dto: RegisterBuyerDto) {
+  /** ShopFlow end user registration — no business, no Workspace access */
+  async registerUser(dto: RegisterUserDto) {
     const email = dto.email.toLowerCase().trim();
     const existing = await this.users.findOne({ where: { email } });
     if (existing) {
@@ -106,10 +106,15 @@ export class AuthService {
       email,
       passwordHash,
       fullName: dto.fullName.trim(),
-      role: 'buyer',
+      role: 'user',
     });
     await this.users.save(user);
     return this.tokenResponse(user);
+  }
+
+  /** Legacy alias for registerUser */
+  async registerBuyer(dto: RegisterUserDto) {
+    return this.registerUser(dto);
   }
 
   async login(dto: LoginDto) {
@@ -127,11 +132,24 @@ export class AuthService {
   }
 
   /**
-   * ShopFlow login — buyers only. Staff must use Workspace.
+   * Business/Seller Login — staff accounts only (owner/manager/sales/ops)
    */
-  async loginBuyer(dto: LoginDto) {
+  async businessLogin(dto: LoginDto) {
     const result = await this.login(dto);
-    if (result.user.role !== 'buyer') {
+    if (result.user.role === 'user' || result.user.role === 'super_admin') {
+      throw new UnauthorizedException(
+        'Business accounts sign in on Kunemi Workspace',
+      );
+    }
+    return result;
+  }
+
+  /**
+   * End User/Buyer Login — ShopFlow users only
+   */
+  async userLogin(dto: LoginDto) {
+    const result = await this.login(dto);
+    if (result.user.role !== 'user') {
       throw new UnauthorizedException(
         'Business accounts sign in on Kunemi Workspace, not ShopFlow',
       );
@@ -140,16 +158,26 @@ export class AuthService {
   }
 
   /**
-   * Workspace login — staff only. Buyers must use ShopFlow.
+   * Super Admin Login — Platform operators only
    */
-  async loginWorkspace(dto: LoginDto) {
+  async adminLogin(dto: LoginDto) {
     const result = await this.login(dto);
-    if (result.user.role === 'buyer') {
+    if (result.user.role !== 'super_admin') {
       throw new UnauthorizedException(
-        'Buyer accounts sign in on ShopFlow, not Workspace',
+        'Super admin credentials required',
       );
     }
     return result;
+  }
+
+  /** Legacy alias for userLogin */
+  async loginBuyer(dto: LoginDto) {
+    return this.userLogin(dto);
+  }
+
+  /** Legacy alias for businessLogin */
+  async loginWorkspace(dto: LoginDto) {
+    return this.businessLogin(dto);
   }
 
   async me(authUser: AuthUser) {
@@ -158,7 +186,7 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.role === 'buyer' || !user.businessId) {
+    if (user.role === 'user' || user.role === 'super_admin' || !user.businessId) {
       return {
         user: {
           id: user.id,
