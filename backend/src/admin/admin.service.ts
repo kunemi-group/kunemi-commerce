@@ -21,6 +21,8 @@ import {
   UpdateBusinessTierDto,
 } from './dto/admin.dto';
 
+import { MailService } from '../mail/mail.service';
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -35,6 +37,7 @@ export class AdminService {
     @InjectRepository(Payment)
     private readonly payments: Repository<Payment>,
     private readonly tenantProvisioner: TenantProvisionerService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -331,6 +334,14 @@ export class AdminService {
     });
 
     await this.users.save(user);
+
+    // Send Platform Admin Provisioning Email via SendByte API
+    void this.mailService.sendAdminUserCreated(
+      user.email,
+      user.fullName,
+      dto.password,
+      dto.role,
+    );
 
     return {
       id: user.id,

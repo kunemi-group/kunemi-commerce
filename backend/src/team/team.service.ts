@@ -14,6 +14,8 @@ import { Business } from '../database/entities/business.entity';
 import { User, type UserRole } from '../database/entities/user.entity';
 import { InviteMemberDto, UpdateMemberRoleDto } from './dto/team.dto';
 
+import { MailService } from '../mail/mail.service';
+
 const TIER_SEATS: Record<string, number> = {
   starter: 2,
   growth: 5,
@@ -27,6 +29,7 @@ export class TeamService {
     private readonly users: Repository<User>,
     @InjectRepository(Business)
     private readonly businesses: Repository<Business>,
+    private readonly mailService: MailService,
   ) {}
 
   async list(user: AuthUser) {
@@ -89,11 +92,21 @@ export class TeamService {
     });
     await this.users.save(member);
 
+    // Send Team Invitation Email via SendByte API
+    void this.mailService.sendTeamMemberInvitation(
+      email,
+      member.fullName,
+      actor.email,
+      temporaryPassword,
+      dto.role,
+      business.name,
+    );
+
     return {
       member: this.toMember(member),
       temporaryPassword,
       message:
-        'Share the temporary password securely. They can sign in with this email.',
+        'Share the temporary password securely. An invitation email has also been sent.',
     };
   }
 

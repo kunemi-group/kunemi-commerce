@@ -33,6 +33,8 @@ function parseMethods(json: string): Array<'transfer' | 'card'> {
   }
 }
 
+import { MailService } from '../mail/mail.service';
+
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -47,6 +49,7 @@ export class DocumentsService {
     private readonly invoiceItems: Repository<InvoiceItem>,
     @InjectRepository(Business)
     private readonly businesses: Repository<Business>,
+    private readonly mailService: MailService,
   ) {}
 
   // ── Quotations ──────────────────────────────────────────────────────────
@@ -117,6 +120,19 @@ export class DocumentsService {
     }
     q.status = 'sent';
     await this.quotations.save(q);
+
+    if (q.customerEmail) {
+      const biz = await this.businesses.findOne({ where: { id: user.businessId } });
+      void this.mailService.sendQuotationEmail(
+        q.customerEmail,
+        q.customerName,
+        q.reference,
+        q.totalCents,
+        biz?.currency || 'NGN',
+        q.validUntil?.toISOString(),
+      );
+    }
+
     return this.toQuoteDto(q);
   }
 
@@ -263,6 +279,19 @@ export class DocumentsService {
     }
     inv.status = 'sent';
     await this.invoices.save(inv);
+
+    if (inv.customerEmail) {
+      const biz = await this.businesses.findOne({ where: { id: user.businessId } });
+      void this.mailService.sendInvoiceEmail(
+        inv.customerEmail,
+        inv.customerName,
+        inv.reference,
+        inv.totalCents,
+        biz?.currency || 'NGN',
+        inv.dueAt?.toISOString(),
+      );
+    }
+
     return this.toInvoiceDto(inv);
   }
 

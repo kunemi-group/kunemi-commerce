@@ -20,6 +20,8 @@ import { ProductVariant } from '../database/entities/product-variant.entity';
 import { PaymentsService } from '../payments/payments.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
+import { MailService } from '../mail/mail.service';
+
 /** Default window for customer bank transfer (also stock hold when catalog lines). */
 const PAYMENT_WINDOW_MINUTES = 30;
 
@@ -42,6 +44,7 @@ export class OrdersService {
     private readonly deliveries: Repository<Delivery>,
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
+    private readonly mailService: MailService,
   ) {
     // SQLite does not support PostgreSQL-style pessimistic row locks
     const dbType = this.config.get<string>('DATABASE_TYPE', 'postgres');
@@ -205,6 +208,17 @@ export class OrdersService {
             : `Order created · bank transfer due within ${PAYMENT_WINDOW_MINUTES}m`,
         }),
       );
+
+      if (order.customerEmail) {
+        const shortRef = order.id.slice(0, 8).toUpperCase();
+        void this.mailService.sendOrderConfirmation(
+          order.customerEmail,
+          order.customerName,
+          shortRef,
+          order.totalCents,
+          business.currency || 'NGN',
+        );
+      }
 
       return {
         id: order.id,

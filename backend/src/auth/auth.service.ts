@@ -17,6 +17,8 @@ import { StorageService } from '../storage/storage.service';
 import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
 import { LoginDto, RegisterUserDto, RegisterDto } from './dto/auth.dto';
 
+import { MailService } from '../mail/mail.service';
+
 function slugify(name: string) {
   const base = name
     .toLowerCase()
@@ -35,6 +37,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly storage: StorageService,
     private readonly tenantProvisioner: TenantProvisionerService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -89,6 +92,13 @@ export class AuthService {
       name: business.name,
     });
 
+    // Send Welcome / Registration email via SendByte
+    void this.mailService.sendRegistrationVerification(
+      user.email,
+      user.fullName,
+      'VERIFIED',
+    );
+
     return this.tokenResponse(user);
   }
 
@@ -108,6 +118,14 @@ export class AuthService {
       role: 'user',
     });
     await this.users.save(user);
+
+    // Send Welcome / Registration email via SendByte
+    void this.mailService.sendRegistrationVerification(
+      user.email,
+      user.fullName,
+      'VERIFIED',
+    );
+
     return this.tokenResponse(user);
   }
 

@@ -17,6 +17,7 @@ import { StorageModule } from './storage/storage.module';
 import { StoreModule } from './store/store.module';
 import { ChatModule } from './chat/chat.module';
 import { AdminModule } from './admin/admin.module';
+import { MailModule } from './mail/mail.module';
 import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -139,6 +140,7 @@ class RootController {
     StoreModule,
     ChatModule,
     AdminModule,
+    MailModule,
   ],
   controllers: [RootController],
   providers: [
