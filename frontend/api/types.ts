@@ -113,7 +113,14 @@ export type ApiDelivery = {
   }>
 }
 
-export type UserRole = "owner" | "manager" | "sales" | "ops"
+export type UserRole =
+  | "owner"
+  | "manager"
+  | "sales"
+  | "ops"
+  | "user"
+  | "admin"
+  | "super_admin"
 
 export type ApiTeamMember = {
   id: string

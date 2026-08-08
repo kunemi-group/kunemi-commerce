@@ -9,13 +9,15 @@ import {
   useState,
 } from "react"
 import { teamMembers, type TeamMember } from "@/lib/data"
+import type { UserRole } from "@/api/types"
 
 /**
- * Session persona for the demo shell:
- * - owner → full admin dashboard
- * - agent → sales team member (human) dense workspace — not an AI agent
+ * System roles aligned with NestJS backend UserRole entity:
+ * - Staff: "owner" | "manager" | "sales" | "ops"
+ * - End User: "user"
+ * - Platform Admin: "admin" | "super_admin"
  */
-export type AppRole = "owner" | "agent"
+export type AppRole = UserRole
 
 type RoleContextValue = {
   role: AppRole
@@ -28,6 +30,16 @@ const RoleContext = createContext<RoleContextValue | null>(null)
 
 const STORAGE_KEY = "kunemi-workspace-role"
 
+const VALID_ROLES: UserRole[] = [
+  "owner",
+  "manager",
+  "sales",
+  "ops",
+  "user",
+  "admin",
+  "super_admin",
+]
+
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState<AppRole>("owner")
   const [hydrated, setHydrated] = useState(false)
@@ -35,7 +47,9 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as AppRole | null
-      if (saved === "owner" || saved === "agent") setRoleState(saved)
+      if (saved && VALID_ROLES.includes(saved)) {
+        setRoleState(saved)
+      }
     } catch {
       // ignore
     }
@@ -52,11 +66,14 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const user = useMemo(() => {
-    if (role === "owner") {
+    if (role === "owner" || role === "admin" || role === "super_admin") {
       return teamMembers.find((a) => a.role === "owner") ?? teamMembers[0]
     }
-    // Demo "sales person" login uses a human sales seat
-    return teamMembers.find((a) => a.role === "sales") ?? teamMembers[1]
+    return (
+      teamMembers.find((a) => a.role === role) ??
+      teamMembers.find((a) => a.role === "sales") ??
+      teamMembers[1]
+    )
   }, [role])
 
   const value = useMemo(
@@ -64,7 +81,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
       role: hydrated ? role : "owner",
       setRole,
       user,
-      dense: role === "agent",
+      dense: role === "sales" || role === "ops",
     }),
     [role, setRole, user, hydrated],
   )
