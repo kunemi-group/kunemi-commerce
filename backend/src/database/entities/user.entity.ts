@@ -10,8 +10,19 @@ import {
 import { dateTimeType } from '../column-types';
 import { Business } from './business.entity';
 
-/** Staff use Workspace; end users use ShopFlow (no businessId); super_admin manages platform */
-export type UserRole = 'owner' | 'manager' | 'sales' | 'ops' | 'user' | 'super_admin';
+/** 
+ * Business Staff: 'owner' | 'manager' | 'sales' | 'ops' (requires businessId)
+ * End User / Buyer: 'user' (no businessId)
+ * Platform Admin: 'admin' | 'super_admin' (no businessId)
+ */
+export type UserRole =
+  | 'owner'
+  | 'manager'
+  | 'sales'
+  | 'ops'
+  | 'user'
+  | 'admin'
+  | 'super_admin';
 
 @Entity('users')
 @Unique(['businessId', 'email'])

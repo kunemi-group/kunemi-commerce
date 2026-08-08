@@ -15,6 +15,7 @@ import { Payment } from '../database/entities/payment.entity';
 import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
 import {
   AdminBusinessQueryDto,
+  CreatePlatformAdminDto,
   SetCustomDomainDto,
   UpdateBusinessStatusDto,
   UpdateBusinessTierDto,
@@ -308,6 +309,62 @@ export class AdminService {
       customDomain: business.customDomain,
       customDomainStatus: business.customDomainStatus,
     };
+  }
+
+  /**
+   * Create a platform admin or super_admin account (Super Admin only)
+   */
+  async createPlatformAdmin(dto: CreatePlatformAdminDto) {
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.users.findOne({ where: { email } });
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const user = this.users.create({
+      businessId: null,
+      email,
+      passwordHash,
+      fullName: dto.fullName.trim(),
+      role: dto.role,
+    });
+
+    await this.users.save(user);
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
+  }
+
+  /**
+   * List all platform admins and super_admins
+   */
+  async listPlatformAdmins() {
+    const admins = await this.users.find({
+      where: [{ role: 'admin' }, { role: 'super_admin' }],
+      select: { id: true, email: true, fullName: true, role: true, createdAt: true },
+      order: { createdAt: 'DESC' },
+    });
+    return { admins };
+  }
+
+  /**
+   * Remove a platform admin account (Super Admin only)
+   */
+  async deletePlatformAdmin(id: string) {
+    const user = await this.users.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('Platform admin user not found');
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      throw new BadRequestException('User is not a platform admin');
+    }
+
+    await this.users.remove(user);
+    return { message: 'Platform admin user deleted successfully', id };
   }
 
   /**

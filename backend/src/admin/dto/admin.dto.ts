@@ -1,4 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsIn, IsString, MinLength } from 'class-validator';
+
+export class CreatePlatformAdminDto {
+  @ApiProperty({ example: 'admin@kunemi.com', description: 'Platform Admin Email' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: 'adminpass123', description: 'Initial Admin Password (min 6 chars)' })
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @ApiProperty({ example: 'Sarah Connor', description: 'Admin Full Name' })
+  @IsString()
+  @MinLength(2)
+  fullName!: string;
+
+  @ApiProperty({ example: 'admin', enum: ['admin', 'super_admin'], description: 'Platform Admin Role' })
+  @IsIn(['admin', 'super_admin'])
+  role!: 'admin' | 'super_admin';
+}
 
 export class UpdateBusinessStatusDto {
   @ApiProperty({ example: 'active', enum: ['active', 'suspended', 'pending'], description: 'Merchant store status' })
