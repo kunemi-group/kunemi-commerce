@@ -12,8 +12,8 @@ const PROTECTED_PREFIXES = [
   "/admin",
 ]
 
-/** Next.js Middleware for Server-Side Cookie-Based Route Protection */
-export function middleware(request: NextRequest) {
+/** Next.js Proxy for Server-Side Cookie-Based Route Protection */
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get("kunemi_workspace_token")?.value
 
