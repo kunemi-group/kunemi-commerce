@@ -46,13 +46,6 @@ export class AuthController {
     return this.auth.registerUser(body);
   }
 
-  /** Legacy alias for buyer registration */
-  @Public()
-  @Post('buyer/register')
-  registerBuyer(@Body() body: RegisterUserDto) {
-    return this.auth.registerUser(body);
-  }
-
   /** ShopFlow / End User login */
   @Public()
   @Post('user/login')
@@ -60,14 +53,7 @@ export class AuthController {
     return this.auth.userLogin(body);
   }
 
-  /** Legacy alias for buyer login */
-  @Public()
-  @Post('buyer/login')
-  loginBuyer(@Body() body: LoginDto) {
-    return this.auth.userLogin(body);
-  }
-
-  /** Super Admin login endpoint */
+  /** Platform Admin login endpoint */
   @Public()
   @Post('admin/login')
   adminLogin(@Body() body: LoginDto) {

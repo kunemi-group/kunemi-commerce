@@ -21,66 +21,65 @@ function slugify(name: string) {
   const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-  return base || 'store';
+    .replace(/^-|-$/g, '');
+  return base || `store-${Date.now()}`;
 }
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(Business)
-    private readonly businesses: Repository<Business>,
     @InjectRepository(User)
     private readonly users: Repository<User>,
+    @InjectRepository(Business)
+    private readonly businesses: Repository<Business>,
     private readonly jwt: JwtService,
     private readonly storage: StorageService,
     private readonly tenantProvisioner: TenantProvisionerService,
   ) {}
 
+  /**
+   * Business/Seller registration: creates business + owner user account.
+   */
   async register(dto: RegisterDto) {
-    const existing = await this.users.findOne({ where: { email: dto.email.toLowerCase() } });
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.users.findOne({ where: { email } });
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
-    // Bank details intentionally empty — owner must complete onboarding before selling.
-    let storeSlug = slugify(dto.businessName);
-    const slugTaken = await this.businesses.findOne({ where: { storeSlug } });
-    if (slugTaken) {
-      storeSlug = `${storeSlug}-${Date.now().toString(36).slice(-4)}`;
-    }
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const storeSlug = slugify(dto.businessName);
 
     const business = this.businesses.create({
-      name: dto.businessName,
+      name: dto.businessName.trim(),
+      email,
       whatsappNumber: dto.whatsappNumber?.trim() || null,
-      email: dto.email.toLowerCase(),
-      subscriptionTier: 'starter',
-      taxEnabled: true,
-      taxRatePercent: 7.5,
+      address: null,
+      taxEnabled: false,
+      taxRatePercent: 0,
       taxLabel: 'VAT',
-      defaultShippingFeeCents: 250000,
+      defaultShippingFeeCents: 0,
       bankName: null,
       bankAccountName: null,
       bankAccountNumber: null,
       brandColor: '#4f6bed',
-      currency: 'NGN', // default only — changeable per business (global product)
-      defaultPaymentMethod: 'bank_transfer',
-      enabledPaymentMethodsJson: '["bank_transfer"]',
       storeSlug,
       storeEnabled: true,
       logoKey: null,
+      subscriptionTier: 'starter',
+      currency: 'NGN',
     });
+
     await this.businesses.save(business);
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = this.users.create({
       businessId: business.id,
-      email: dto.email.toLowerCase(),
+      email,
       passwordHash,
-      fullName: dto.fullName,
+      fullName: dto.fullName.trim(),
       role: 'owner',
     });
+
     await this.users.save(user);
 
     // Provision tenant domain/subdomain mapping in Cloudflare KV
@@ -112,11 +111,6 @@ export class AuthService {
     return this.tokenResponse(user);
   }
 
-  /** Legacy alias for registerUser */
-  async registerBuyer(dto: RegisterUserDto) {
-    return this.registerUser(dto);
-  }
-
   async login(dto: LoginDto) {
     const user = await this.users.findOne({
       where: { email: dto.email.toLowerCase() },
@@ -136,7 +130,7 @@ export class AuthService {
    */
   async businessLogin(dto: LoginDto) {
     const result = await this.login(dto);
-    if (result.user.role === 'user' || result.user.role === 'super_admin') {
+    if (result.user.role === 'user' || result.user.role === 'super_admin' || result.user.role === 'admin') {
       throw new UnauthorizedException(
         'Business accounts sign in on Kunemi Workspace',
       );
@@ -145,7 +139,7 @@ export class AuthService {
   }
 
   /**
-   * End User/Buyer Login — ShopFlow users only
+   * End User Login — ShopFlow users only
    */
   async userLogin(dto: LoginDto) {
     const result = await this.login(dto);
@@ -158,26 +152,16 @@ export class AuthService {
   }
 
   /**
-   * Super Admin Login — Platform operators only
+   * Admin Login — Platform operators only (admin, super_admin)
    */
   async adminLogin(dto: LoginDto) {
     const result = await this.login(dto);
-    if (result.user.role !== 'super_admin') {
+    if (result.user.role !== 'super_admin' && result.user.role !== 'admin') {
       throw new UnauthorizedException(
-        'Super admin credentials required',
+        'Platform admin credentials required',
       );
     }
     return result;
-  }
-
-  /** Legacy alias for userLogin */
-  async loginBuyer(dto: LoginDto) {
-    return this.userLogin(dto);
-  }
-
-  /** Legacy alias for businessLogin */
-  async loginWorkspace(dto: LoginDto) {
-    return this.businessLogin(dto);
   }
 
   async me(authUser: AuthUser) {
@@ -186,7 +170,7 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.role === 'user' || user.role === 'super_admin' || !user.businessId) {
+    if (user.role === 'user' || user.role === 'super_admin' || user.role === 'admin' || !user.businessId) {
       return {
         user: {
           id: user.id,
@@ -204,80 +188,54 @@ export class AuthService {
     });
     if (!business) throw new NotFoundException('Business not found');
 
+    const logoUrl = this.storage.publicUrl(business.logoKey);
+
+    const subscriptionTier = business.subscriptionTier || 'starter';
+    const currency = normalizeCurrency(business.currency);
+
     return {
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
-        businessId: user.businessId,
+        businessId: business.id,
       },
-      business: this.businessProfile(business),
-    };
-  }
-
-  businessProfile(business: Business) {
-    let enabledPaymentMethods: string[] = ['bank_transfer'];
-    try {
-      const parsed = JSON.parse(
-        business.enabledPaymentMethodsJson || '["bank_transfer"]',
-      ) as string[];
-      if (Array.isArray(parsed) && parsed.length) {
-        enabledPaymentMethods = parsed;
-      }
-    } catch {
-      /* default */
-    }
-
-    return {
-      id: business.id,
-      name: business.name,
-      whatsappNumber: business.whatsappNumber,
-      email: business.email,
-      address: business.address,
-      tier: business.subscriptionTier,
-      currency: normalizeCurrency(business.currency),
-      payments: {
-        defaultMethod: business.defaultPaymentMethod || 'bank_transfer',
-        enabledMethods: enabledPaymentMethods,
-      },
-      tax: {
-        enabled: business.taxEnabled,
-        ratePercent: Number(business.taxRatePercent),
-        label: business.taxLabel,
-      },
-      shipping: {
-        defaultFeeCents: business.defaultShippingFeeCents,
-      },
-      bank: {
+      business: {
+        id: business.id,
+        name: business.name,
+        email: business.email,
+        whatsappNumber: business.whatsappNumber,
+        address: business.address,
+        taxEnabled: business.taxEnabled,
+        taxRatePercent: Number(business.taxRatePercent),
+        taxLabel: business.taxLabel,
+        defaultShippingFeeCents: business.defaultShippingFeeCents,
         bankName: business.bankName,
-        accountName: business.bankAccountName,
-        accountNumber: business.bankAccountNumber,
+        bankAccountName: business.bankAccountName,
+        bankAccountNumber: business.bankAccountNumber,
+        brandColor: business.brandColor,
+        storeSlug: business.storeSlug,
+        storeEnabled: business.storeEnabled,
+        logoKey: business.logoKey,
+        logoUrl,
+        subscriptionTier,
+        currency,
+        onboarding: onboardingStatus(business),
       },
-      brandColor: business.brandColor,
-      store: {
-        slug: business.storeSlug,
-        enabled: business.storeEnabled,
-        publicPath: business.storeSlug
-          ? `/api/store/${business.storeSlug}`
-          : null,
-      },
-      logoKey: business.logoKey,
-      logoUrl: this.storage.publicUrl(business.logoKey),
-      onboarding: onboardingStatus(business),
     };
   }
 
   private tokenResponse(user: User) {
     const payload: JwtPayload = {
       sub: user.id,
-      // Buyers: empty string so staff-scoped services keep string typing
       businessId: user.businessId ?? '',
       role: user.role,
       email: user.email,
     };
+    const accessToken = this.jwt.sign(payload);
     return {
-      accessToken: this.jwt.sign(payload),
+      accessToken,
       user: {
         id: user.id,
         email: user.email,
