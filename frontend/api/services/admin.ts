@@ -47,6 +47,14 @@ export interface AdminMerchantListResponse {
   };
 }
 
+export interface PlatformAdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'admin' | 'super_admin';
+  createdAt: string;
+}
+
 export async function fetchAdminMetrics(): Promise<PlatformMetrics> {
   return apiClient.get<PlatformMetrics>('/admin/metrics');
 }
@@ -95,6 +103,23 @@ export async function setMerchantCustomDomain(
     `/admin/businesses/${id}/custom-domain`,
     { customDomain },
   );
+}
+
+export async function fetchAdminUsers(): Promise<{ admins: PlatformAdminUser[] }> {
+  return apiClient.get<{ admins: PlatformAdminUser[] }>('/admin/users');
+}
+
+export async function createAdminUserRequest(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role: 'admin' | 'super_admin';
+}): Promise<PlatformAdminUser> {
+  return apiClient.post<PlatformAdminUser>('/admin/users', input);
+}
+
+export async function deleteAdminUserRequest(id: string): Promise<{ message: string; id: string }> {
+  return apiClient.delete<{ message: string; id: string }>(`/admin/users/${id}`);
 }
 
 export async function seedAdminAccount() {

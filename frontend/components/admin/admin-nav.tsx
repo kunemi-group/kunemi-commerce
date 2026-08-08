@@ -9,6 +9,7 @@ import {
   Globe,
   LogOut,
   ShieldCheck,
+  UserCheck,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,11 @@ const navItems = [
     href: '/admin/domains',
     icon: Globe,
   },
+  {
+    title: 'Platform Admins',
+    href: '/admin/users',
+    icon: UserCheck,
+  },
 ];
 
 export function AdminNav() {
@@ -47,7 +53,7 @@ export function AdminNav() {
           <div>
             <h1 className="font-bold text-sm text-white tracking-wide">Kunemi Platform</h1>
             <p className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
-              <Zap className="h-3 w-3 text-amber-400 fill-amber-400" /> Super Admin
+              <Zap className="h-3 w-3 text-amber-400 fill-amber-400" /> Platform Admin
             </p>
           </div>
         </div>
@@ -82,8 +88,8 @@ export function AdminNav() {
       {/* User Footer */}
       <div className="pt-4 border-t border-slate-800/80 space-y-3">
         <div className="px-2">
-          <p className="text-xs font-semibold text-slate-200 truncate">{user?.fullName || 'Super Admin'}</p>
-          <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+          <p className="text-xs font-semibold text-slate-200 truncate">{user?.fullName || 'Platform Operator'}</p>
+          <p className="text-[11px] text-slate-500 truncate">{user?.email} ({user?.role})</p>
         </div>
 
         <Button

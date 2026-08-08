@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createAdminUserRequest,
+  deleteAdminUserRequest,
   fetchAdminMerchants,
   fetchAdminMetrics,
+  fetchAdminUsers,
   setMerchantCustomDomain,
   updateMerchantStatus,
   updateMerchantTier,
@@ -12,6 +15,7 @@ export const adminQueryKeys = {
   metrics: () => [...adminQueryKeys.all, 'metrics'] as const,
   merchants: (params?: Record<string, unknown>) =>
     [...adminQueryKeys.all, 'merchants', params] as const,
+  users: () => [...adminQueryKeys.all, 'users'] as const,
 };
 
 export function useAdminMetrics() {
@@ -79,6 +83,38 @@ export function useSetCustomDomain() {
     }) => setMerchantCustomDomain(id, customDomain),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.all });
+    },
+  });
+}
+
+export function useAdminUsers() {
+  return useQuery({
+    queryKey: adminQueryKeys.users(),
+    queryFn: fetchAdminUsers,
+  });
+}
+
+export function useCreateAdminUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      email: string;
+      password: string;
+      fullName: string;
+      role: 'admin' | 'super_admin';
+    }) => createAdminUserRequest(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.users() });
+    },
+  });
+}
+
+export function useDeleteAdminUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAdminUserRequest(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.users() });
     },
   });
 }
