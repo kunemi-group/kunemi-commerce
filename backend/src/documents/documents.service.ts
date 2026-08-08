@@ -129,6 +129,7 @@ export class DocumentsService {
         q.reference,
         q.totalCents,
         biz?.currency || 'NGN',
+        q.id,
         q.validUntil?.toISOString(),
       );
     }
@@ -288,6 +289,7 @@ export class DocumentsService {
         inv.reference,
         inv.totalCents,
         biz?.currency || 'NGN',
+        inv.id,
         inv.dueAt?.toISOString(),
       );
     }

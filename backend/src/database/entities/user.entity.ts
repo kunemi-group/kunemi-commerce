@@ -54,6 +54,15 @@ export class User {
   @Column({ type: 'text' })
   role!: UserRole;
 
+  @Column({ name: 'is_email_verified', type: 'boolean', default: false })
+  isEmailVerified!: boolean;
+
+  @Column({ name: 'email_verification_otp', type: 'text', nullable: true })
+  emailVerificationOtp!: string | null;
+
+  @Column({ name: 'email_verification_expires_at', type: dateTimeType(), nullable: true })
+  emailVerificationExpiresAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;
 }

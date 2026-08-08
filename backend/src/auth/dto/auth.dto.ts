@@ -55,3 +55,20 @@ export class LoginDto {
   @MinLength(1)
   password!: string;
 }
+
+export class VerifyEmailDto {
+  @ApiProperty({ example: 'owner@lagosthreads.co', description: 'Account Email' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: '849201', description: '6-digit OTP Verification Code' })
+  @IsString()
+  @MinLength(6)
+  otp!: string;
+}
+
+export class ResendOtpDto {
+  @ApiProperty({ example: 'owner@lagosthreads.co', description: 'Account Email' })
+  @IsEmail()
+  email!: string;
+}

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -15,7 +16,13 @@ import { onboardingStatus } from '../common/onboarding';
 import { normalizeCurrency } from '../common/currency';
 import { StorageService } from '../storage/storage.service';
 import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
-import { LoginDto, RegisterUserDto, RegisterDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  RegisterUserDto,
+  RegisterDto,
+  VerifyEmailDto,
+  ResendOtpDto,
+} from './dto/auth.dto';
 
 import { MailService } from '../mail/mail.service';
 
@@ -75,12 +82,18 @@ export class AuthService {
 
     await this.businesses.save(business);
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
     const user = this.users.create({
       businessId: business.id,
       email,
       passwordHash,
       fullName: dto.fullName.trim(),
       role: 'owner',
+      isEmailVerified: false,
+      emailVerificationOtp: otp,
+      emailVerificationExpiresAt: otpExpiresAt,
     });
 
     await this.users.save(user);
@@ -92,11 +105,11 @@ export class AuthService {
       name: business.name,
     });
 
-    // Send Welcome / Registration email via SendByte
+    // Send Welcome / Registration email with 6-digit OTP via SendByte
     void this.mailService.sendRegistrationVerification(
       user.email,
       user.fullName,
-      'VERIFIED',
+      otp,
     );
 
     return this.tokenResponse(user);
@@ -110,23 +123,84 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
     const user = this.users.create({
       businessId: null,
       email,
       passwordHash,
       fullName: dto.fullName.trim(),
       role: 'user',
+      isEmailVerified: false,
+      emailVerificationOtp: otp,
+      emailVerificationExpiresAt: otpExpiresAt,
     });
     await this.users.save(user);
 
-    // Send Welcome / Registration email via SendByte
+    // Send Welcome / Registration email with 6-digit OTP via SendByte
     void this.mailService.sendRegistrationVerification(
       user.email,
       user.fullName,
-      'VERIFIED',
+      otp,
     );
 
     return this.tokenResponse(user);
+  }
+
+  /** Confirm 6-digit email verification OTP */
+  async verifyEmail(dto: VerifyEmailDto) {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+    if (user.isEmailVerified) {
+      const tokens = await this.tokenResponse(user);
+      return { message: 'Email address is already verified', verified: true, ...tokens };
+    }
+    if (!user.emailVerificationOtp || user.emailVerificationOtp !== dto.otp.trim()) {
+      throw new BadRequestException('Invalid verification OTP code');
+    }
+    if (user.emailVerificationExpiresAt && user.emailVerificationExpiresAt < new Date()) {
+      throw new BadRequestException('Verification OTP code has expired. Please request a new code.');
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationOtp = null;
+    user.emailVerificationExpiresAt = null;
+    await this.users.save(user);
+
+    const tokens = await this.tokenResponse(user);
+    return {
+      message: 'Email address verified successfully!',
+      verified: true,
+      ...tokens,
+    };
+  }
+
+  /** Resend 6-digit email verification OTP */
+  async resendOtp(dto: ResendOtpDto) {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+    if (user.isEmailVerified) {
+      return { message: 'Email address is already verified' };
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailVerificationOtp = otp;
+    user.emailVerificationExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await this.users.save(user);
+
+    void this.mailService.sendRegistrationVerification(
+      user.email,
+      user.fullName,
+      otp,
+    );
+
+    return { message: 'A new 6-digit verification OTP code has been sent to your email.' };
   }
 
   async login(dto: LoginDto) {

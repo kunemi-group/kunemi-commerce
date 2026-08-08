@@ -1,7 +1,13 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterUserDto, RegisterDto } from './dto/auth.dto';
+import {
+  LoginDto,
+  RegisterUserDto,
+  RegisterDto,
+  VerifyEmailDto,
+  ResendOtpDto,
+} from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
@@ -58,6 +64,20 @@ export class AuthController {
   @Post('admin/login')
   adminLogin(@Body() body: LoginDto) {
     return this.auth.adminLogin(body);
+  }
+
+  /** Verify 6-digit email OTP */
+  @Public()
+  @Post('verify-email')
+  verifyEmail(@Body() body: VerifyEmailDto) {
+    return this.auth.verifyEmail(body);
+  }
+
+  /** Resend 6-digit email OTP */
+  @Public()
+  @Post('resend-otp')
+  resendOtp(@Body() body: ResendOtpDto) {
+    return this.auth.resendOtp(body);
   }
 
   /** Session bootstrap */

@@ -85,27 +85,27 @@ export class MailService {
   }
 
   /**
-   * Send Registration / Welcome Email
+   * Send Registration / Welcome Email with 6-digit OTP
    */
   async sendRegistrationVerification(
     email: string,
     fullName: string,
     verificationCode: string,
   ) {
-    const subject = 'Welcome to Kunemi Commerce - Verify Your Email';
+    const subject = `${verificationCode} - Verify Your Kunemi Commerce Account`;
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded-lg: 8px;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #4f6bed;">Welcome to Kunemi Commerce, ${fullName}!</h2>
         <p style="color: #475569; font-size: 15px; line-height: 1.5;">
-          Thank you for registering. Please verify your email address to complete your registration.
+          Thank you for registering. Please enter the 6-digit OTP verification code below to verify your email address:
         </p>
-        <div style="background-color: #f1f5f9; padding: 15px; text-align: center; border-radius: 6px; margin: 20px 0;">
-          <span style="font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #0f172a;">${verificationCode}</span>
+        <div style="background-color: #f1f5f9; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4f6bed;">${verificationCode}</span>
         </div>
-        <p style="color: #64748b; font-size: 13px;">If you did not request this code, you can safely ignore this email.</p>
+        <p style="color: #64748b; font-size: 13px;">This verification code will expire in 15 minutes. If you did not request this code, you can safely ignore this email.</p>
       </div>
     `;
-    const text = `Welcome to Kunemi Commerce, ${fullName}!\nVerification Code: ${verificationCode}`;
+    const text = `Welcome to Kunemi Commerce, ${fullName}!\nVerification Code: ${verificationCode}\nThis code expires in 15 minutes.`;
     return this.sendMail({ to: email, subject, html, text });
   }
 
@@ -167,7 +167,7 @@ export class MailService {
   }
 
   /**
-   * Send Quotation Email to Customer
+   * Send Quotation Email to Customer with Document & Checkout Link
    */
   async sendQuotationEmail(
     email: string,
@@ -175,9 +175,12 @@ export class MailService {
     docNumber: string,
     totalCents: number,
     currency: string,
+    docId: string,
     validUntil?: string,
   ) {
     const formattedAmount = `${currency} ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
+    const docUrl = `${appUrl}/documents/quotation/${docId}`;
     const subject = `Quotation ${docNumber} from Kunemi Merchant`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -187,19 +190,22 @@ export class MailService {
           Please find your requested quotation details below:
         </p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
-          <p style="margin: 0; color: #334155;"><strong>Quotation Number:</strong> ${docNumber}</p>
+          <p style="margin: 0; color: #334155;"><strong>Quotation Reference:</strong> ${docNumber}</p>
           <p style="margin: 5px 0 0 0; color: #334155;"><strong>Total Amount:</strong> ${formattedAmount}</p>
           ${validUntil ? `<p style="margin: 5px 0 0 0; color: #334155;"><strong>Valid Until:</strong> ${new Date(validUntil).toLocaleDateString()}</p>` : ''}
+        </div>
+        <div style="margin: 25px 0; text-align: center;">
+          <a href="${docUrl}" style="background-color: #4f6bed; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">View Quotation & Accept</a>
         </div>
         <p style="color: #475569; font-size: 14px;">Thank you for your business interest!</p>
       </div>
     `;
-    const text = `Quotation ${docNumber}\nCustomer: ${customerName}\nTotal Amount: ${formattedAmount}`;
+    const text = `Quotation ${docNumber}\nCustomer: ${customerName}\nTotal Amount: ${formattedAmount}\nView & Pay: ${docUrl}`;
     return this.sendMail({ to: email, subject, html, text });
   }
 
   /**
-   * Send Invoice Email to Customer
+   * Send Invoice Email to Customer with Direct Payment Link
    */
   async sendInvoiceEmail(
     email: string,
@@ -207,9 +213,13 @@ export class MailService {
     docNumber: string,
     totalCents: number,
     currency: string,
+    docId: string,
     dueAt?: string,
+    paymentToken?: string,
   ) {
     const formattedAmount = `${currency} ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
+    const paymentUrl = paymentToken ? `${appUrl}/pay/${paymentToken}` : `${appUrl}/documents/invoice/${docId}`;
     const subject = `Invoice ${docNumber} - Payment Request`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -219,14 +229,17 @@ export class MailService {
           Here is your invoice payment details:
         </p>
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
-          <p style="margin: 0; color: #334155;"><strong>Invoice Number:</strong> ${docNumber}</p>
+          <p style="margin: 0; color: #334155;"><strong>Invoice Reference:</strong> ${docNumber}</p>
           <p style="margin: 5px 0 0 0; color: #334155;"><strong>Amount Due:</strong> ${formattedAmount}</p>
           ${dueAt ? `<p style="margin: 5px 0 0 0; color: #334155;"><strong>Due Date:</strong> ${new Date(dueAt).toLocaleDateString()}</p>` : ''}
+        </div>
+        <div style="margin: 25px 0; text-align: center;">
+          <a href="${paymentUrl}" style="background-color: #10b981; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Pay Invoice Now</a>
         </div>
         <p style="color: #475569; font-size: 14px;">Thank you for your prompt payment.</p>
       </div>
     `;
-    const text = `Invoice ${docNumber}\nCustomer: ${customerName}\nAmount Due: ${formattedAmount}`;
+    const text = `Invoice ${docNumber}\nCustomer: ${customerName}\nAmount Due: ${formattedAmount}\nPay Online: ${paymentUrl}`;
     return this.sendMail({ to: email, subject, html, text });
   }
 
