@@ -10,10 +10,11 @@ import { CreateDocumentDrawer } from "@/components/dashboard/create-document-dra
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import type { Kpi } from "@/lib/data"
-import { formatNgn, useQuotations } from "@/api"
+import { useMoney, useQuotations } from "@/api"
 
 export default function QuotationsPage() {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: quotations = [] } = useQuotations(isAuthenticated)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -45,7 +46,7 @@ export default function QuotationsPage() {
       {
         id: "value",
         label: "Quoted value",
-        value: formatNgn(value),
+        value: money.format(value),
         delta: "all time",
         trend: "up",
         helper: "sum of quote totals",
@@ -59,7 +60,7 @@ export default function QuotationsPage() {
         helper: "quote → invoice",
       },
     ]
-  }, [quotations])
+  }, [quotations, money])
 
   return (
     <DashboardShell

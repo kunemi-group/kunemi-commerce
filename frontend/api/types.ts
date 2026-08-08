@@ -388,6 +388,7 @@ export type PublicTrackResponse = {
   externalCourierName: string | null
   businessName: string
   businessWhatsapp: string | null
+  currency?: string
   orderId: string
   customerName: string | null
   deliveryAddress: string | null

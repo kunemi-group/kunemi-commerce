@@ -30,13 +30,13 @@ import {
 } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
 import {
-  formatNgn,
   getApiErrorMessage,
   minutesLeft,
   relativeTime,
   shortId,
   useCancelOrder,
   useCreateDelivery,
+  useMoney,
   useOrder,
 } from "@/api"
 
@@ -51,6 +51,7 @@ export function OrderDetailSheet({
   onOpenChange: (open: boolean) => void
   onChanged?: () => void
 }) {
+  const money = useMoney()
   const {
     data: order,
     isLoading: loading,
@@ -146,7 +147,7 @@ export function OrderDetailSheet({
                         : "Bank transfer"
                   }
                 />
-                <Meta label="Total" value={formatNgn(order.totalCents)} strong />
+                <Meta label="Total" value={money.format(order.totalCents)} strong />
                 <Meta
                   icon={<Phone className="size-3.5" />}
                   label="Phone"
@@ -203,7 +204,7 @@ export function OrderDetailSheet({
                         ) : null}
                       </span>
                       <span className="tabular-nums font-medium">
-                        {formatNgn(line.unitPriceCents * line.quantity)}
+                        {money.format(line.unitPriceCents * line.quantity)}
                       </span>
                     </li>
                   ))}
@@ -211,19 +212,25 @@ export function OrderDetailSheet({
                 <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span className="tabular-nums">{formatNgn(order.subtotalCents)}</span>
+                    <span className="tabular-nums">
+                      {money.format(order.subtotalCents)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span className="tabular-nums">{formatNgn(order.shippingFeeCents)}</span>
+                    <span className="tabular-nums">
+                      {money.format(order.shippingFeeCents)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span className="tabular-nums">{formatNgn(order.taxCents)}</span>
+                    <span className="tabular-nums">{money.format(order.taxCents)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-foreground">
                     <span>Total</span>
-                    <span className="tabular-nums">{formatNgn(order.totalCents)}</span>
+                    <span className="tabular-nums">
+                      {money.format(order.totalCents)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -269,7 +276,7 @@ export function OrderDetailSheet({
                     message={paymentLinkMessage({
                       customer: order.customerName,
                       orderId: shortId(order.id),
-                      total: formatNgn(order.totalCents),
+                      total: money.format(order.totalCents),
                       paymentLink: payUrl,
                     })}
                     label="Copy payment link message"
@@ -281,7 +288,7 @@ export function OrderDetailSheet({
                     message={transferInstructionsMessage({
                       customer: order.customerName,
                       orderId: shortId(order.id),
-                      total: formatNgn(order.totalCents),
+                      total: money.format(order.totalCents),
                     })}
                     label="Copy transfer follow-up"
                   />

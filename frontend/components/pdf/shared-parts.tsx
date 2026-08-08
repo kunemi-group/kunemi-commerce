@@ -128,9 +128,11 @@ function TableHeader({ styles }: { styles: PdfStyles }) {
 export function PdfLineTable({
   styles,
   lines,
+  currency = "NGN",
 }: {
   styles: PdfStyles
   lines: QuoteLine[]
+  currency?: string
 }) {
   const chunks: QuoteLine[][] = []
   for (let i = 0; i < lines.length; i += PDF_TABLE_CHUNK) {
@@ -162,7 +164,7 @@ export function PdfLineTable({
                 <Text style={[styles.cell, styles.colQty]}>{line.qty}</Text>
                 <Text style={[styles.cellMuted, styles.colPrice]}>{line.unitPrice}</Text>
                 <Text style={[styles.cell, styles.colTotal]}>
-                  {amount ? formatMoney(amount) : "—"}
+                  {amount ? formatMoney(amount, currency) : "—"}
                 </Text>
               </View>
             )

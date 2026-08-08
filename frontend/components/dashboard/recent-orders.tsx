@@ -18,7 +18,7 @@ import { HoldCountdown } from "./hold-countdown"
 import { OrderDetailSheet } from "./order-detail-sheet"
 import { useAuth } from "@/lib/auth-context"
 import {
-  formatNgn,
+  useMoney,
   minutesLeft,
   relativeTime,
   shortId,
@@ -27,6 +27,7 @@ import {
 
 export function RecentOrders() {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: orders = [], isLoading, refetch } = useOrders(isAuthenticated)
   const [detailId, setDetailId] = useState<string | null>(null)
   const recent = orders.slice(0, 8)
@@ -99,7 +100,7 @@ export function RecentOrders() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
-                          {formatNgn(order.totalCents)}
+                          {money.format(order.totalCents)}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={order.status} />

@@ -61,6 +61,7 @@ export class TrackingService {
     let business: {
       name: string;
       whatsappNumber: string | null;
+      currency: string;
     } | null = null;
 
     if (this.isPostgres) {
@@ -144,7 +145,7 @@ export class TrackingService {
         where: { id: delivery.businessId },
       });
       business = biz
-        ? { name: biz.name, whatsappNumber: biz.whatsappNumber }
+        ? { name: biz.name, whatsappNumber: biz.whatsappNumber, currency: biz.currency }
         : null;
     }
 
@@ -183,6 +184,7 @@ export class TrackingService {
       externalCourierName: delivery.externalCourierName,
       businessName: business?.name ?? 'Shop',
       businessWhatsapp: business?.whatsappNumber ?? null,
+      currency: business?.currency ?? 'NGN',
       orderId: delivery.orderId,
       customerName: order?.customerName ?? null,
       deliveryAddress: order?.deliveryAddress ?? null,
@@ -275,6 +277,7 @@ export class TrackingService {
           'whatsappNumber',
           'whatsapp_number',
         ) as string | null) ?? null,
+      currency: String(this.col(row, 'currency', 'currency') ?? 'NGN'),
     };
   }
 

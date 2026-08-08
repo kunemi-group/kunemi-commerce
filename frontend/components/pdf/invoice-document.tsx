@@ -24,6 +24,7 @@ export function InvoiceDocument({
   >
 }) {
   const styles = createPdfStyles(branding.brandColor)
+  const currency = invoice.currency || business.currency || "NGN"
   const totals = computeDocTotals({
     lines: invoice.lines,
     statedTotal: invoice.total,
@@ -32,6 +33,7 @@ export function InvoiceDocument({
     taxRatePercent: branding.taxRatePercent,
     taxLabel: branding.taxLabel,
     amountPaid: invoice.amountPaid,
+    currency,
   })
   const isPaid = invoice.status === "paid"
   const showTransfer = invoice.paymentMethods.includes("transfer")
@@ -43,6 +45,7 @@ export function InvoiceDocument({
     ...(invoice.orderId ? [{ label: "Order", value: invoice.orderId }] : []),
     ...(invoice.quoteId ? [{ label: "Quote ref", value: invoice.quoteId }] : []),
     { label: "Prepared by", value: invoice.owner },
+    { label: "Currency", value: currency },
     {
       label: "Tax",
       value: branding.taxEnabled
@@ -78,7 +81,7 @@ export function InvoiceDocument({
 
         <PdfMeta styles={styles} items={meta} />
 
-        <PdfLineTable styles={styles} lines={invoice.lines} />
+        <PdfLineTable styles={styles} lines={invoice.lines} currency={currency} />
 
         <PdfTotals styles={styles} totals={totals} mode={isPaid ? "paid" : "due"} />
 

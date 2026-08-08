@@ -14,6 +14,7 @@ import {
   normalizeCurrency,
 } from '../common/currency';
 import { StorageService } from '../storage/storage.service';
+import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class BusinessesService {
     @InjectRepository(Business)
     private readonly businesses: Repository<Business>,
     private readonly storage: StorageService,
+    private readonly tenantProvisioner: TenantProvisionerService,
   ) {}
 
   async me(user: AuthUser) {
@@ -112,6 +114,16 @@ export class BusinessesService {
     }
 
     await this.businesses.save(business);
+
+    // Sync updated tenant slug mapping in Cloudflare KV
+    if (business.storeSlug) {
+      void this.tenantProvisioner.registerTenant({
+        tenantId: business.id,
+        slug: business.storeSlug,
+        name: business.name,
+      });
+    }
+
     return this.toDto(business);
   }
 

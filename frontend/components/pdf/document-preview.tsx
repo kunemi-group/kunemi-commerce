@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 
 export function QuotationPreview({ quote }: { quote: Quotation }) {
   const branding = useBranding()
+  const currency = quote.currency || business.currency || "NGN"
   const totals = computeDocTotals({
     lines: quote.lines,
     statedTotal: quote.total,
@@ -16,6 +17,7 @@ export function QuotationPreview({ quote }: { quote: Quotation }) {
     taxEnabled: branding.taxEnabled,
     taxRatePercent: branding.taxRatePercent,
     taxLabel: branding.taxLabel,
+    currency,
   })
 
   return (
@@ -39,7 +41,7 @@ export function QuotationPreview({ quote }: { quote: Quotation }) {
           { label: "Issue date", value: quote.issueDate ?? quote.created },
           { label: "Valid until", value: quote.validUntil },
           { label: "Prepared by", value: quote.owner },
-          { label: "Currency", value: business.currency },
+          { label: "Currency", value: currency },
           {
             label: "Tax",
             value: branding.taxEnabled
@@ -48,7 +50,11 @@ export function QuotationPreview({ quote }: { quote: Quotation }) {
           },
         ]}
       />
-      <LineTable lines={quote.lines} brandColor={branding.brandColor} />
+      <LineTable
+        lines={quote.lines}
+        brandColor={branding.brandColor}
+        currency={currency}
+      />
       <TotalsBlock
         totals={totals}
         mode="total"
@@ -71,6 +77,7 @@ export function QuotationPreview({ quote }: { quote: Quotation }) {
 
 export function InvoicePreview({ invoice }: { invoice: Invoice }) {
   const branding = useBranding()
+  const currency = invoice.currency || business.currency || "NGN"
   const totals = computeDocTotals({
     lines: invoice.lines,
     statedTotal: invoice.total,
@@ -79,6 +86,7 @@ export function InvoicePreview({ invoice }: { invoice: Invoice }) {
     taxRatePercent: branding.taxRatePercent,
     taxLabel: branding.taxLabel,
     amountPaid: invoice.amountPaid,
+    currency,
   })
   const isPaid = invoice.status === "paid"
 
@@ -105,6 +113,7 @@ export function InvoicePreview({ invoice }: { invoice: Invoice }) {
           ...(invoice.orderId ? [{ label: "Order", value: invoice.orderId }] : []),
           ...(invoice.quoteId ? [{ label: "Quote ref", value: invoice.quoteId }] : []),
           { label: "Prepared by", value: invoice.owner },
+          { label: "Currency", value: currency },
           {
             label: "Tax",
             value: branding.taxEnabled
@@ -113,7 +122,11 @@ export function InvoicePreview({ invoice }: { invoice: Invoice }) {
           },
         ]}
       />
-      <LineTable lines={invoice.lines} brandColor={branding.brandColor} />
+      <LineTable
+        lines={invoice.lines}
+        brandColor={branding.brandColor}
+        currency={currency}
+      />
       <TotalsBlock
         totals={totals}
         mode={isPaid ? "paid" : "due"}
@@ -275,9 +288,11 @@ function Meta({ items }: { items: { label: string; value: string }[] }) {
 function LineTable({
   lines,
   brandColor,
+  currency = "NGN",
 }: {
   lines: QuoteLine[]
   brandColor: string
+  currency?: string
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -314,7 +329,7 @@ function LineTable({
                   {line.unitPrice}
                 </td>
                 <td className="px-3 py-2.5 text-right font-medium tabular-nums">
-                  {amount ? formatMoney(amount) : "—"}
+                  {amount ? formatMoney(amount, currency) : "—"}
                 </td>
               </tr>
             )

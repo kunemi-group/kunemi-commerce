@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import {
   formatMoney,
   formatNgn,
+  majorToMinor,
+  minorToMajor,
   shortId,
   minutesLeft,
   flattenInventory,
@@ -18,6 +20,14 @@ describe("formatMoney", () => {
 
   it("formatNgn remains a NGN convenience alias", () => {
     expect(formatNgn(15_000)).toMatch(/150/)
+  })
+
+  it("major/minor conversion respects zero-decimal currencies", () => {
+    expect(majorToMinor(19.99, "USD")).toBe(1999)
+    expect(minorToMajor(1999, "USD")).toBe(19.99)
+    expect(majorToMinor(1500, "JPY")).toBe(1500)
+    expect(minorToMajor(1500, "JPY")).toBe(1500)
+    expect(majorToMinor(100, "XOF")).toBe(100)
   })
 })
 

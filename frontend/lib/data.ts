@@ -683,8 +683,10 @@ export interface Quotation {
   channel: "whatsapp" | "email" | "both"
   paymentMethods: ("card" | "transfer")[]
   lines: QuoteLine[]
-  /** Delivery fee in naira (number) or display string */
+  /** Delivery fee in major currency units */
   shippingFee?: number
+  /** ISO 4217 — used by PDF / preview totals */
+  currency?: string
   created: string
   owner: string
   notes?: string
@@ -708,6 +710,8 @@ export interface Invoice {
   owner: string
   lines: QuoteLine[]
   shippingFee?: number
+  /** ISO 4217 — used by PDF / preview totals */
+  currency?: string
   notes?: string
   issueDate?: string
   /** Amount already paid (for partial) */

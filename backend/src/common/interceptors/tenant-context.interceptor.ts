@@ -35,14 +35,29 @@ export class TenantContextInterceptor implements NestInterceptor {
   }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const req = context.switchToHttp().getRequest<{ user?: AuthUser }>();
+    const req = context.switchToHttp().getRequest<{
+      user?: AuthUser;
+      headers: Record<string, string | string[] | undefined>;
+    }>();
     const user = req.user;
-    if (!user || !this.dataSource.isInitialized || !this.isPostgres) {
+
+    // Check Cloudflare Edge Proxy headers
+    const platformSecret = this.config.get<string>(
+      'PLATFORM_SECRET',
+      'kunemi-edge-secret-key-change-in-prod',
+    );
+    const reqSecret = req.headers['x-platform-secret'];
+    const isSignedByEdge = typeof reqSecret === 'string' && reqSecret === platformSecret;
+    const edgeTenantId = isSignedByEdge && typeof req.headers['x-tenant-id'] === 'string'
+      ? req.headers['x-tenant-id']
+      : '';
+
+    const businessId = user?.businessId || edgeTenantId || '';
+    const userId = user?.sub || '';
+
+    if ((!businessId && !userId) || !this.dataSource.isInitialized || !this.isPostgres) {
       return next.handle();
     }
-
-    const businessId = user.businessId || '';
-    const userId = user.sub || '';
 
     return from(
       Promise.all([

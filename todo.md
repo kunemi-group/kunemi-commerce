@@ -181,7 +181,8 @@ pnpm test           # Vitest (api layer + totals)
 - [x] Chat module (shared API): buyer endpoints + Workspace `/inbox` UI
 - [x] Multi-currency foundation: `business.currency` (ISO), formatMoney helpers, settings picker
 - [x] PaymentProvider registry (bank_transfer live; Stripe/Paystack stubs)
-- [ ] Wire all UI call sites off `formatNgn` → `formatMoney(..., business.currency)`
+- [x] Wire Workspace UI off `formatNgn` → `useMoney()` / `formatMoney(..., currency)`
+- [x] Currency polish: form labels, shipping major/minor, revenue chart, PDF currency, product edit price
 - [ ] Card gateway webhooks (Stripe/Paystack) as secondary methods behind provider interface
 - [ ] Courier API providers + webhooks (manual fulfillment already works)
 - [ ] External messaging (WA/IG) — separate from in-app ShopFlow↔Workspace chat

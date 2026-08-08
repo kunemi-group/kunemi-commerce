@@ -6,10 +6,11 @@ import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import type { Kpi } from "@/lib/data"
 import { useAuth } from "@/lib/auth-context"
-import { formatNgn, useOrders, usePayments } from "@/api"
+import { useMoney, useOrders, usePayments } from "@/api"
 
 export function KpiCards({ items }: { items?: Kpi[] }) {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: orders = [], isLoading: ordersLoading } = useOrders(
     isAuthenticated && !items,
   )
@@ -47,7 +48,7 @@ export function KpiCards({ items }: { items?: Kpi[] }) {
       {
         id: "revenue",
         label: "Confirmed revenue",
-        value: formatNgn(revenue),
+        value: money.format(revenue),
         delta: "paid+",
         trend: "up",
         helper: "paid, shipped, delivered",
@@ -61,7 +62,7 @@ export function KpiCards({ items }: { items?: Kpi[] }) {
         helper: "claimed bank transfers",
       },
     ]
-  }, [items, orders, payments])
+  }, [items, orders, payments, money])
 
   const loading = !items && (ordersLoading || paymentsLoading)
 

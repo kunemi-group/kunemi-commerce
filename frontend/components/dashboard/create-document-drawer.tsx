@@ -18,8 +18,11 @@ import { formatMoney, parseMoney } from "@/lib/pdf/money"
 import type { QuoteLine } from "@/lib/data"
 import {
   getApiErrorMessage,
+  majorToMinor,
+  minorToMajor,
   useCreateInvoice,
   useCreateQuotation,
+  useMoney,
 } from "@/api"
 
 type Line = {
@@ -43,6 +46,7 @@ export function CreateDocumentDrawer({
 }) {
   const branding = useBranding()
   const { isAuthenticated, business } = useAuth()
+  const money = useMoney()
   const createQuote = useCreateQuotation()
   const createInvoice = useCreateInvoice()
 
@@ -54,7 +58,7 @@ export function CreateDocumentDrawer({
   const [shippingFee, setShippingFee] = useState(
     String(
       business
-        ? Math.round(business.shipping.defaultFeeCents / 100)
+        ? minorToMajor(business.shipping.defaultFeeCents, money.currency)
         : branding.defaultShippingFeeNaira,
     ),
   )
@@ -73,10 +77,10 @@ export function CreateDocumentDrawer({
     setError(null)
     setLines([{ id: "1", name: "", qty: 1, unitPrice: "", taxExempt: false }])
     const ship = business
-      ? Math.round(business.shipping.defaultFeeCents / 100)
+      ? minorToMajor(business.shipping.defaultFeeCents, money.currency)
       : branding.defaultShippingFeeNaira
     setShippingFee(String(ship))
-  }, [open, business, branding.defaultShippingFeeNaira])
+  }, [open, business, branding.defaultShippingFeeNaira, money.currency])
 
   const quoteLines: QuoteLine[] = useMemo(
     () =>
@@ -85,12 +89,15 @@ export function CreateDocumentDrawer({
         .map((l) => ({
           name: l.name.trim(),
           qty: l.qty,
-          unitPrice: l.unitPrice.includes("₦")
+          unitPrice: /[A-Za-z$€£₦]/.test(l.unitPrice)
             ? l.unitPrice
-            : formatMoney(parseMoney(l.unitPrice) || Number(l.unitPrice) || 0),
+            : formatMoney(
+                parseMoney(l.unitPrice) || Number(l.unitPrice) || 0,
+                money.currency,
+              ),
           taxExempt: l.taxExempt,
         })),
-    [lines],
+    [lines, money.currency],
   )
 
   const totals = useMemo(
@@ -101,8 +108,9 @@ export function CreateDocumentDrawer({
         taxEnabled: branding.taxEnabled,
         taxRatePercent: branding.taxRatePercent,
         taxLabel: branding.taxLabel,
+        currency: money.currency,
       }),
-    [quoteLines, shippingFee, branding],
+    [quoteLines, shippingFee, branding, money.currency],
   )
 
   const busy = createQuote.isPending || createInvoice.isPending
@@ -126,8 +134,9 @@ export function CreateDocumentDrawer({
       .map((l) => ({
         description: l.name.trim(),
         quantity: l.qty,
-        unitPriceCents: Math.round(
-          (parseMoney(l.unitPrice) || Number(l.unitPrice) || 0) * 100,
+        unitPriceCents: majorToMinor(
+          parseMoney(l.unitPrice) || Number(l.unitPrice) || 0,
+          money.currency,
         ),
         taxExempt: l.taxExempt,
       }))
@@ -142,8 +151,9 @@ export function CreateDocumentDrawer({
         customerPhone: phone.trim() || undefined,
         customerEmail: email.trim() || undefined,
         deliveryAddress: address.trim() || undefined,
-        shippingFeeCents: Math.round(
-          (parseMoney(shippingFee) || Number(shippingFee) || 0) * 100,
+        shippingFeeCents: majorToMinor(
+          parseMoney(shippingFee) || Number(shippingFee) || 0,
+          money.currency,
         ),
         notes: notes.trim() || undefined,
         paymentMethods: ["transfer"] as Array<"transfer" | "card">,
@@ -183,7 +193,7 @@ export function CreateDocumentDrawer({
           <Field label="Email" value={email} onChange={setEmail} placeholder="optional" />
           <Field label="Address" value={address} onChange={setAddress} placeholder="optional" />
           <Field
-            label="Shipping fee (₦)"
+            label={money.label("Shipping fee")}
             value={shippingFee}
             onChange={setShippingFee}
             placeholder="0"
@@ -244,7 +254,7 @@ export function CreateDocumentDrawer({
                     />
                   </label>
                   <label className="text-xs text-muted-foreground">
-                    Unit price (₦)
+                    {money.label("Unit price")}
                     <input
                       type="number"
                       min={0}

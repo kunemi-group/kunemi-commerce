@@ -17,6 +17,7 @@ import { StorageModule } from './storage/storage.module';
 import { StoreModule } from './store/store.module';
 import { ChatModule } from './chat/chat.module';
 import { DatabaseModule } from './database/database.module';
+import { CommonModule } from './common/common.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import {
@@ -122,6 +123,7 @@ class RootController {
       },
     }),
     DatabaseModule,
+    CommonModule,
     StorageModule,
     HealthModule,
     AuthModule,

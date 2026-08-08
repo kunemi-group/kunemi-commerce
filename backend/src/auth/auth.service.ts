@@ -14,6 +14,7 @@ import type { AuthUser, JwtPayload } from '../common/types/auth-user';
 import { onboardingStatus } from '../common/onboarding';
 import { normalizeCurrency } from '../common/currency';
 import { StorageService } from '../storage/storage.service';
+import { TenantProvisionerService } from '../common/services/tenant-provisioner.service';
 import { LoginDto, RegisterBuyerDto, RegisterDto } from './dto/auth.dto';
 
 function slugify(name: string) {
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly users: Repository<User>,
     private readonly jwt: JwtService,
     private readonly storage: StorageService,
+    private readonly tenantProvisioner: TenantProvisionerService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -80,6 +82,13 @@ export class AuthService {
       role: 'owner',
     });
     await this.users.save(user);
+
+    // Provision tenant domain/subdomain mapping in Cloudflare KV
+    void this.tenantProvisioner.registerTenant({
+      tenantId: business.id,
+      slug: storeSlug,
+      name: business.name,
+    });
 
     return this.tokenResponse(user);
   }

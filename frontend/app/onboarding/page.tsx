@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
+import { majorToMinor, minorToMajor, normalizeCurrency } from "@/api"
 
 const STEPS = [
   { id: "contact", title: "Contact", icon: MessageCircle },
@@ -42,8 +43,9 @@ export default function OnboardingPage() {
   const [taxEnabled, setTaxEnabled] = useState(true)
   const [taxRate, setTaxRate] = useState("7.5")
   const [taxLabel, setTaxLabel] = useState("VAT")
-  const [shippingNaira, setShippingNaira] = useState("2500")
+  const [shippingMajor, setShippingMajor] = useState("2500")
   const [brandColor, setBrandColor] = useState("#4f6bed")
+  const currency = normalizeCurrency(business?.currency)
 
   useEffect(() => {
     if (!business) return
@@ -56,7 +58,11 @@ export default function OnboardingPage() {
     setTaxEnabled(business.tax.enabled)
     setTaxRate(String(business.tax.ratePercent ?? 7.5))
     setTaxLabel(business.tax.label ?? "VAT")
-    setShippingNaira(String(Math.round((business.shipping.defaultFeeCents ?? 0) / 100)))
+    const ship = minorToMajor(
+      business.shipping.defaultFeeCents ?? 0,
+      business.currency,
+    )
+    setShippingMajor(String(ship))
     setBrandColor(business.brandColor ?? "#4f6bed")
   }, [business])
 
@@ -121,7 +127,7 @@ export default function OnboardingPage() {
   async function onTax(e: FormEvent) {
     e.preventDefault()
     const rate = Number(taxRate)
-    const ship = Math.round(Number(shippingNaira) * 100)
+    const ship = majorToMinor(Number(shippingMajor) || 0, currency)
     if (Number.isNaN(rate) || rate < 0 || rate > 100) {
       setError("Enter a valid tax rate (0–100)")
       return
@@ -312,9 +318,9 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <Field
-                  label="Default shipping (₦)"
-                  value={shippingNaira}
-                  onChange={setShippingNaira}
+                  label={`Default shipping fee (${currency})`}
+                  value={shippingMajor}
+                  onChange={setShippingMajor}
                   type="number"
                   icon={Truck}
                 />

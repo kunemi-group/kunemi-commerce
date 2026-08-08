@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kunemi-edge-coordinator",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "BACKEND_API_URL": "http://localhost:3001",
+    "WORKSPACE_UI_URL": "http://localhost:3000",
+    "SHOPFLOW_UI_URL": "http://localhost:3000",
+    "PLATFORM_SECRET": "kunemi-edge-secret-key-change-in-prod"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "TENANT_LOOKUP",
+      "id": "tenant_lookup_kv_id",
+      "preview_id": "tenant_lookup_kv_preview_id"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "kunemi-commerce-media",
+      "preview_bucket_name": "kunemi-commerce-media-preview"
+    }
+  ]
+}

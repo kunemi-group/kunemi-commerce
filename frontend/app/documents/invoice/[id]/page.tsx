@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InvoicePreview } from "@/components/pdf/document-preview"
 import { DownloadPdfButton } from "@/components/pdf/download-pdf-button"
-import { getApiErrorMessage, toUiInvoice, useInvoice } from "@/api"
+import { getApiErrorMessage, toUiInvoice, useInvoice, useMoney } from "@/api"
 
 export default function InvoiceDocumentPage({
   params,
@@ -15,6 +15,7 @@ export default function InvoiceDocumentPage({
 }) {
   const { id } = use(params)
   const decoded = decodeURIComponent(id)
+  const money = useMoney()
   const { data, isLoading, error } = useInvoice(decoded)
 
   if (isLoading) {
@@ -40,7 +41,7 @@ export default function InvoiceDocumentPage({
     )
   }
 
-  const invoice = toUiInvoice(data)
+  const invoice = toUiInvoice(data, money.currency)
 
   return (
     <div className="min-h-svh bg-zinc-950 print:bg-white">
