@@ -40,7 +40,7 @@ type AuthContextValue = {
     password: string
     whatsappNumber?: string
   }) => Promise<{ onboardingComplete: boolean }>
-  logout: () => void
+  logout: () => Promise<void>
   refresh: () => Promise<void>
   updateBusiness: (patch: Record<string, unknown>) => Promise<BusinessProfile>
   getToken: () => string | null
@@ -57,14 +57,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const applySession = useCallback(async (accessToken: string) => {
-    setStoredToken(accessToken)
-    const me = await fetchMe()
-    setToken(accessToken)
-    setUser(me.user)
-    setBusiness(me.business)
-    queryClient.setQueryData(queryKeys.me, me)
-  }, [queryClient])
+  const applySession = useCallback(
+    async (accessToken: string, refreshToken?: string) => {
+      setStoredToken(accessToken, refreshToken)
+      const me = await fetchMe()
+      setToken(accessToken)
+      setUser(me.user)
+      setBusiness(me.business)
+      queryClient.setQueryData(queryKeys.me, me)
+    },
+    [queryClient],
+  )
 
   const refresh = useCallback(async () => {
     const stored = getStoredToken()
@@ -78,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await applySession(stored)
     } catch {
-      logoutLocal()
+      await logoutLocal()
       setToken(null)
       setUser(null)
       setBusiness(null)
@@ -97,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       try {
         const res = await loginRequest(email, password)
-        await applySession(res.accessToken)
+        await applySession(res.accessToken, res.refreshToken)
         const me = await fetchMe()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
@@ -120,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       try {
         const res = await registerRequest(input)
-        await applySession(res.accessToken)
+        await applySession(res.accessToken, res.refreshToken)
         const me = await fetchMe()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
@@ -132,8 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession],
   )
 
-  const logout = useCallback(() => {
-    logoutLocal()
+  const logout = useCallback(async () => {
+    await logoutLocal()
     setToken(null)
     setUser(null)
     setBusiness(null)

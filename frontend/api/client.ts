@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios"
+import { deleteCookie, getCookie, setCookie } from "@/lib/cookies"
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -9,6 +10,9 @@ export const REFRESH_TOKEN_KEY = "kunemi_workspace_refresh_token"
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null
+  // Read from cookie first (Next.js Security Recommendation), fallback to localStorage for migration
+  const tokenFromCookie = getCookie(TOKEN_KEY)
+  if (tokenFromCookie) return tokenFromCookie
   try {
     return localStorage.getItem(TOKEN_KEY)
   } catch {
@@ -18,6 +22,8 @@ export function getStoredToken(): string | null {
 
 export function getStoredRefreshToken(): string | null {
   if (typeof window === "undefined") return null
+  const refreshFromCookie = getCookie(REFRESH_TOKEN_KEY)
+  if (refreshFromCookie) return refreshFromCookie
   try {
     return localStorage.getItem(REFRESH_TOKEN_KEY)
   } catch {
@@ -25,15 +31,44 @@ export function getStoredRefreshToken(): string | null {
   }
 }
 
-export function setStoredToken(accessToken: string | null, refreshToken?: string | null) {
+export function setStoredToken(
+  accessToken: string | null,
+  refreshToken?: string | null,
+) {
   if (typeof window === "undefined") return
   try {
-    if (accessToken) localStorage.setItem(TOKEN_KEY, accessToken)
-    else localStorage.removeItem(TOKEN_KEY)
+    if (accessToken) {
+      setCookie(TOKEN_KEY, accessToken, 7)
+      try {
+        localStorage.setItem(TOKEN_KEY, accessToken)
+      } catch {
+        /* ignore */
+      }
+    } else {
+      deleteCookie(TOKEN_KEY)
+      try {
+        localStorage.removeItem(TOKEN_KEY)
+      } catch {
+        /* ignore */
+      }
+    }
 
     if (refreshToken !== undefined) {
-      if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-      else localStorage.removeItem(REFRESH_TOKEN_KEY)
+      if (refreshToken) {
+        setCookie(REFRESH_TOKEN_KEY, refreshToken, 7)
+        try {
+          localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+        } catch {
+          /* ignore */
+        }
+      } else {
+        deleteCookie(REFRESH_TOKEN_KEY)
+        try {
+          localStorage.removeItem(REFRESH_TOKEN_KEY)
+        } catch {
+          /* ignore */
+        }
+      }
     }
   } catch {
     /* ignore */
@@ -79,8 +114,14 @@ const processQueue = (error: unknown, token: string | null = null) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
       const refreshToken = getStoredRefreshToken()
       if (
         refreshToken &&
@@ -102,10 +143,10 @@ apiClient.interceptors.response.use(
         isRefreshing = true
 
         try {
-          const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
-            `${API_BASE}/auth/refresh`,
-            { refreshToken },
-          )
+          const { data } = await axios.post<{
+            accessToken: string
+            refreshToken: string
+          }>(`${API_BASE}/auth/refresh`, { refreshToken })
           setStoredToken(data.accessToken, data.refreshToken)
           processQueue(null, data.accessToken)
           originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
