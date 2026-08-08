@@ -1,22 +1,28 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /** Workspace: create business + owner */
 export class RegisterDto {
+  @ApiProperty({ example: 'Lagos Threads', description: 'Business/Store Name' })
   @IsString()
   @MinLength(2)
   businessName!: string;
 
+  @ApiProperty({ example: 'owner@lagosthreads.co', description: 'Owner Email Address' })
   @IsEmail()
   email!: string;
 
+  @ApiProperty({ example: 'password123', description: 'Owner Account Password (min 6 chars)' })
   @IsString()
   @MinLength(6)
   password!: string;
 
+  @ApiProperty({ example: 'Adeola Johnson', description: 'Owner Full Name' })
   @IsString()
   @MinLength(2)
   fullName!: string;
 
+  @ApiPropertyOptional({ example: '+2348012345678', description: 'Business WhatsApp Phone Number' })
   @IsOptional()
   @IsString()
   whatsappNumber?: string;
@@ -24,22 +30,27 @@ export class RegisterDto {
 
 /** ShopFlow: buyer only (no business) */
 export class RegisterBuyerDto {
+  @ApiProperty({ example: 'buyer@example.com', description: 'Buyer Email Address' })
   @IsEmail()
   email!: string;
 
+  @ApiProperty({ example: 'buyerpass123', description: 'Buyer Account Password' })
   @IsString()
   @MinLength(6)
   password!: string;
 
+  @ApiProperty({ example: 'Chidi Okafor', description: 'Buyer Full Name' })
   @IsString()
   @MinLength(2)
   fullName!: string;
 }
 
 export class LoginDto {
+  @ApiProperty({ example: 'owner@lagosthreads.co', description: 'Account Email' })
   @IsEmail()
   email!: string;
 
+  @ApiProperty({ example: 'password123', description: 'Account Password' })
   @IsString()
   @MinLength(1)
   password!: string;
