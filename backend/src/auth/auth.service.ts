@@ -22,6 +22,7 @@ import {
   RegisterDto,
   VerifyEmailDto,
   ResendOtpDto,
+  RefreshTokenDto,
 } from './dto/auth.dto';
 
 import { MailService } from '../mail/mail.service';
@@ -112,7 +113,7 @@ export class AuthService {
       otp,
     );
 
-    return this.tokenResponse(user);
+    return await this.tokenResponse(user);
   }
 
   /** ShopFlow end user registration — no business, no Workspace access */
@@ -145,7 +146,7 @@ export class AuthService {
       otp,
     );
 
-    return this.tokenResponse(user);
+    return await this.tokenResponse(user);
   }
 
   /** Confirm 6-digit email verification OTP */
@@ -214,7 +215,7 @@ export class AuthService {
     if (!ok) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    return this.tokenResponse(user);
+    return await this.tokenResponse(user);
   }
 
   /**
@@ -318,22 +319,75 @@ export class AuthService {
     };
   }
 
-  private tokenResponse(user: User) {
+  async refreshToken(dto: RefreshTokenDto) {
+    let payload: { sub: string; tokenType?: string };
+    try {
+      payload = this.jwt.verify(dto.refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (payload.tokenType !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    const user = await this.users.findOne({ where: { id: payload.sub } });
+    if (!user || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
+      throw new UnauthorizedException('Session expired. Please sign in again.');
+    }
+
+    if (user.refreshTokenExpiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token has expired. Please sign in again.');
+    }
+
+    const matches = await bcrypt.compare(dto.refreshToken, user.refreshTokenHash);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return this.tokenResponse(user);
+  }
+
+  async logout(userId: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (user) {
+      user.refreshTokenHash = null;
+      user.refreshTokenExpiresAt = null;
+      await this.users.save(user);
+    }
+    return { message: 'Logged out successfully' };
+  }
+
+  private async tokenResponse(user: User) {
     const payload: JwtPayload = {
       sub: user.id,
       businessId: user.businessId ?? '',
       role: user.role,
       email: user.email,
     };
-    const accessToken = this.jwt.sign(payload);
+    const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
+    const refreshToken = this.jwt.sign(
+      { sub: user.id, tokenType: 'refresh' },
+      { expiresIn: '7d' },
+    );
+
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    const refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    user.refreshTokenHash = refreshTokenHash;
+    user.refreshTokenExpiresAt = refreshTokenExpiresAt;
+    await this.users.save(user);
+
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
         businessId: user.businessId,
+        isEmailVerified: user.isEmailVerified,
       },
     };
   }

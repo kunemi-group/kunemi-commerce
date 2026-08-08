@@ -63,6 +63,12 @@ export class User {
   @Column({ name: 'email_verification_expires_at', type: dateTimeType(), nullable: true })
   emailVerificationExpiresAt!: Date | null;
 
+  @Column({ name: 'refresh_token_hash', type: 'text', nullable: true })
+  refreshTokenHash!: string | null;
+
+  @Column({ name: 'refresh_token_expires_at', type: dateTimeType(), nullable: true })
+  refreshTokenExpiresAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;
 }

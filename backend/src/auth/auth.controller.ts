@@ -7,6 +7,7 @@ import {
   RegisterDto,
   VerifyEmailDto,
   ResendOtpDto,
+  RefreshTokenDto,
 } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -78,6 +79,20 @@ export class AuthController {
   @Post('resend-otp')
   resendOtp(@Body() body: ResendOtpDto) {
     return this.auth.resendOtp(body);
+  }
+
+  /** Refresh Access Token using Refresh Token */
+  @Public()
+  @Post('refresh')
+  refreshToken(@Body() body: RefreshTokenDto) {
+    return this.auth.refreshToken(body);
+  }
+
+  /** Invalidate Refresh Token / Logout session */
+  @ApiBearerAuth('JWT-auth')
+  @Post('logout')
+  logout(@CurrentUser() user: AuthUser) {
+    return this.auth.logout(user.sub);
   }
 
   /** Session bootstrap */
