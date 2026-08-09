@@ -22,7 +22,7 @@ Backend for **Kunemi Workspace** (Kunemi Commerce).
 
 ```bash
 cd backend
-docker compose up -d
+docker compose up -d --build
 # backend/.env should have DATABASE_TYPE=postgres
 npm install
 npm run start:dev
@@ -33,9 +33,13 @@ npm run start:dev
 - Seeded user: `owner@lagosthreads.co` / `password123`  
 - Postgres: `localhost:5432` / user `shopflow` / password `shopflow` / db `shopflow` (Docker service name; product is Kunemi Workspace)
 
+The Compose `api` service builds from the current `backend/` checkout, runs compiled
+database migrations, and then starts the backend image. PostgreSQL is marked healthy
+before the API starts. Re-run `docker compose up -d --build` after backend changes.
+
 On boot the API:
 
-1. Syncs TypeORM schema  
+1. Runs pending TypeORM migrations  
 2. Seeds demo business if empty  
 3. Applies **Postgres RLS policies** + public tracking `SECURITY DEFINER` functions  
 
