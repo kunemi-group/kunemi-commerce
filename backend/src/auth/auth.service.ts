@@ -284,6 +284,14 @@ export class AuthService {
 
     const subscriptionTier = business.subscriptionTier || 'starter';
     const currency = normalizeCurrency(business.currency);
+    const enabledPaymentMethods = (() => {
+      try {
+        const parsed = JSON.parse(business.enabledPaymentMethodsJson || '[]');
+        return Array.isArray(parsed) && parsed.length ? parsed : ['bank_transfer'];
+      } catch {
+        return ['bank_transfer'];
+      }
+    })();
 
     return {
       user: {
@@ -313,6 +321,40 @@ export class AuthService {
         logoUrl,
         subscriptionTier,
         currency,
+        tier: subscriptionTier,
+        inventoryOptional: true,
+        whatsapp: business.whatsappNumber,
+        payments: {
+          defaultMethod: business.defaultPaymentMethod || 'bank_transfer',
+          enabledMethods: enabledPaymentMethods,
+          bank: {
+            bankName: business.bankName,
+            accountName: business.bankAccountName,
+            accountNumber: business.bankAccountNumber,
+          },
+        },
+        tax: {
+          enabled: business.taxEnabled,
+          ratePercent: Number(business.taxRatePercent),
+          label: business.taxLabel,
+        },
+        shipping: {
+          defaultFeeCents: business.defaultShippingFeeCents,
+        },
+        bank: {
+          bankName: business.bankName,
+          accountName: business.bankAccountName,
+          accountNumber: business.bankAccountNumber,
+        },
+        store: {
+          slug: business.storeSlug,
+          enabled: business.storeEnabled,
+          publicPath: business.storeSlug ? `/api/store/${business.storeSlug}` : null,
+        },
+        branding: {
+          brandColor: business.brandColor,
+          logoDataUrl: null,
+        },
         onboarding: onboardingStatus(business),
       },
     };

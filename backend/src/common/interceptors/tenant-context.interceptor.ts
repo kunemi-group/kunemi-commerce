@@ -67,6 +67,8 @@ export class TenantContextInterceptor implements NestInterceptor {
 
     return new Observable((subscriber) => {
       const queryRunner = this.dataSource.createQueryRunner('master');
+      const originalRelease = queryRunner.release;
+      const releaseQueryRunner = originalRelease.bind(queryRunner);
       let settled = false;
 
       const finish = async (error?: unknown) => {
@@ -90,7 +92,8 @@ export class TenantContextInterceptor implements NestInterceptor {
         } catch (transactionError) {
           subscriber.error(transactionError);
         } finally {
-          if (!queryRunner.isReleased) await queryRunner.release();
+          queryRunner.release = originalRelease;
+          if (!queryRunner.isReleased) await releaseQueryRunner();
         }
       };
 
@@ -102,6 +105,12 @@ export class TenantContextInterceptor implements NestInterceptor {
           await queryRunner.query(`SELECT set_config('app.current_user_id', $1, true)`, [userId]);
           await queryRunner.query(`SELECT set_config('app.is_platform_admin', $1, true)`, [String(isPlatformAdmin)]);
           await queryRunner.query(`SELECT set_config('app.is_public', $1, true)`, [String(isPublic)]);
+
+          // TypeORM assumes that a query runner returned by createQueryRunner
+          // is owned by the operation that requested it and may release it
+          // after save/remove. The interceptor owns this runner for the whole
+          // request, so nested ORM operations must not release it early.
+          queryRunner.release = async () => undefined;
 
           this.tenantContext.run(
             { queryRunner, businessId, userId, isPlatformAdmin, isPublic },
