@@ -193,9 +193,17 @@ Creating a delivery moves order `paid` → `shipped`. Marking delivery `delivere
 
 ## Postgres RLS
 
+Production schema changes are migration-driven. The application runtime must use a non-owner role; run migrations with the separate `DATABASE_MIGRATION_USER` and `DATABASE_MIGRATION_PASSWORD` credentials:
+
+```bash
+npm run migration:run
+```
+
+`ALLOW_SQLITE_SYNC=true` is only for explicit local/test SQLite development. PostgreSQL startup never synchronizes or mutates the schema, and RLS policies are installed by the baseline migration.
+
 - Tables: `businesses`, `users`, `products`, `product_variants`, `orders`, `order_items`, `order_status_history`, `deliveries`, `delivery_status_events`, `payments`
 - Policy uses `current_setting('app.current_business_id', true)`
-- `ENABLE ROW LEVEL SECURITY` (not `FORCE`) so the table owner can seed/migrate
+- `ENABLE` + `FORCE ROW LEVEL SECURITY` are applied by the baseline migration
 - Public tracking uses `SECURITY DEFINER` functions:
   - `get_delivery_by_tracking_token`
   - `get_delivery_events`
@@ -211,6 +219,6 @@ Every minute: expire unpaid `pending` orders past `reservedUntil` and release re
 
 - Card gateway webhooks (optional second method)
 - Wire remaining Next.js screens to this API
-- Optional non-owner DB role + `FORCE ROW LEVEL SECURITY` for stricter isolation
+- Configure separate non-owner runtime and migration DB roles before production deployment
 
 Spec: `docs/Phase1_Technical_Build_Plan.md`

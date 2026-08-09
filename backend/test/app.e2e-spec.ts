@@ -3,8 +3,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import type { SuperAgentTest } from 'supertest';
-import { AppModule } from './../src/app.module';
 import { applyHttpSecurity } from './../src/common/http/http-security';
+import { AppModule } from './../src/app.module';
 
 jest.setTimeout(120_000);
 
@@ -13,9 +13,11 @@ describe('Kunemi Workspace API (e2e)', () => {
   let agent: SuperAgentTest;
 
   beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
     process.env.DATABASE_TYPE = 'sqlite';
     process.env.SQLITE_PATH = 'kunemi-workspace.e2e.sqlite';
     process.env.SEED_ON_BOOT = 'true';
+    process.env.ALLOW_SQLITE_SYNC = 'true';
     process.env.JWT_SECRET = 'e2e-secret';
     process.env.CORS_ORIGIN = 'http://localhost:3000';
 

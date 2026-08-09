@@ -33,7 +33,7 @@ npm run start:dev
 # → http://localhost:3001/api/health
 # seed login: owner@lagosthreads.co / password123
 # bank transfer is default payment (pay link + verify)
-# deliveries + public tracking are persisted; RLS policies applied on boot
+# deliveries + public tracking are persisted; run database migrations before rollout
 
 # UI (still mock-backed until wired)
 cd frontend

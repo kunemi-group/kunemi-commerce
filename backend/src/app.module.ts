@@ -77,7 +77,11 @@ class RootController {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
+      validate: validateEnvironment,
+    }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -110,7 +114,8 @@ class RootController {
             type: 'better-sqlite3',
             database: config.get<string>('SQLITE_PATH', 'shopflow.dev.sqlite'),
             entities,
-            synchronize: !isProduction,
+            synchronize:
+              !isProduction && config.get<string>('ALLOW_SQLITE_SYNC') === 'true',
             logging,
           };
         }
@@ -124,6 +129,7 @@ class RootController {
           entities,
           synchronize: false,
           migrationsRun: false,
+          migrations: [__dirname + '/database/migrations/*{.js,.ts}'],
           logging,
         };
       },

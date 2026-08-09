@@ -181,11 +181,11 @@ Complete the P0 security work before production deployment or adding more public
 #### SEC-P0-03 — Make tenant isolation fail closed
 
 - [x] Stop swallowing tenant-context setup errors in `TenantContextInterceptor`; reject the request before business queries execute.
-- [ ] Replace connection-pool session GUC usage with request transactions/query runners using transaction-local context, or mandatory tenant-scoped repositories.
-- [ ] Ensure cleanup uses the same database connection and cannot leak tenant context to another request.
+- [x] Replace connection-pool session GUC usage with request transactions/query runners using transaction-local context, or mandatory tenant-scoped repositories.
+- [x] Ensure cleanup uses the same database connection and cannot leak tenant context to another request.
 - [ ] Require `{ id, businessId }` for all tenant-owned reads and mutations, including scheduled jobs and relation reloads.
 - [x] Add `businessId` to the order-expiry variant lookup and other ID-only tenant-owned queries.
-- [ ] Run PostgreSQL with a non-owner application role and enable/verify `FORCE ROW LEVEL SECURITY` where applicable.
+- [x] Run PostgreSQL with a non-owner application role and enable/verify `FORCE ROW LEVEL SECURITY` where applicable.
 - [ ] Add concurrent cross-tenant tests for orders, products, variants, payments, proofs, deliveries, documents, chats, team members, and expiry processing.
 - **Files:** `backend/src/common/interceptors/tenant-context.interceptor.ts`, RLS files, all tenant module services.
 - **Done when:** tenant-context failure blocks requests and Business A cannot access Business B data during normal, concurrent, or scheduled execution.
@@ -193,11 +193,11 @@ Complete the P0 security work before production deployment or adding more public
 #### SEC-P0-04 — Replace schema synchronization with migrations
 
 - [x] Set TypeORM `synchronize: false` for PostgreSQL and all production environments.
-- [ ] Permit SQLite synchronization only in explicit local/test configuration if still needed.
-- [ ] Add a baseline migration for schema, indexes, constraints, and RLS policies.
-- [ ] Add migration generate/run/revert scripts.
-- [ ] Run migrations before application rollout with a role separate from the runtime role.
-- [ ] Test migration from a representative existing database and document rollback/restore.
+- [x] Permit SQLite synchronization only in explicit local/test configuration if still needed.
+- [x] Add a baseline migration for schema, indexes, constraints, and RLS policies.
+- [x] Add migration generate/run/revert scripts.
+- [x] Run migrations before application rollout with a role separate from the runtime role.
+- [x] Test migration from a representative existing database and document rollback/restore.
 - **Files:** `backend/src/app.module.ts`, `backend/package.json`, new `backend/src/database/migrations/`.
 - **Done when:** production startup never modifies schema automatically and migrations can create a clean database.
 
@@ -403,7 +403,7 @@ Complete the P0 security work before production deployment or adding more public
 | Public pay UI | `frontend/app/pay/[token]/` |
 | Public track UI | `frontend/app/track/[token]/` |
 | Docker Postgres | `backend/docker-compose.yml` |
-| RLS bootstrap | `backend/src/database/rls.service.ts` |
+| RLS and baseline migration | `backend/src/database/migrations/1710000000000-BaselineSchemaAndRls.ts` |
 | Auth | `backend/src/auth/` |
 | Businesses | `backend/src/businesses/` |
 | Orders | `backend/src/orders/` |
