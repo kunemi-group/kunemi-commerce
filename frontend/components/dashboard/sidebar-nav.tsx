@@ -30,7 +30,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <div className="leading-tight">
           <p className="text-sm font-semibold tracking-tight">Kunemi Workspace</p>
           <p className="text-xs text-muted-foreground">
-            {role === "agent" ? "Sales floor" : "Kunemi Commerce"}
+            {role === "sales" ? "Sales floor" : "Kunemi Commerce"}
           </p>
         </div>
       </div>

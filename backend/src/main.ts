@@ -2,14 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { parseCorsOrigins } from './common/config/environment';
+import { applyHttpSecurity } from './common/http/http-security';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  applyHttpSecurity(app);
 
   app.setGlobalPrefix('api');
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
+  const configuredOrigins = parseCorsOrigins(process.env.CORS_ORIGIN, nodeEnv);
   app.enableCors({
     // Include ShopFlow storefront origins via CORS_ORIGIN (comma-separated)
-    origin: process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()) ?? [
+    origin: configuredOrigins.length ? configuredOrigins : [
       'http://localhost:3000',
       'http://127.0.0.1:3000',
       'http://localhost:3002',
@@ -49,13 +55,15 @@ async function bootstrap() {
     .addTag('Admin', 'Platform Super Admin executive metrics & merchant management')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'Kunemi Commerce API Documentation',
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      customSiteTitle: 'Kunemi Commerce API Documentation',
+      swaggerOptions: {
+        persistAuthorization: false,
+      },
+    });
+  }
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);

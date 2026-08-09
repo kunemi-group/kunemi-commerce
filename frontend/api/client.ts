@@ -1,79 +1,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios"
-import { deleteCookie, getCookie, setCookie } from "@/lib/cookies"
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "http://localhost:3001/api"
-
-export const TOKEN_KEY = "kunemi_workspace_token"
-export const REFRESH_TOKEN_KEY = "kunemi_workspace_refresh_token"
-
-export function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null
-  // Read from cookie first (Next.js Security Recommendation), fallback to localStorage for migration
-  const tokenFromCookie = getCookie(TOKEN_KEY)
-  if (tokenFromCookie) return tokenFromCookie
-  try {
-    return localStorage.getItem(TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function getStoredRefreshToken(): string | null {
-  if (typeof window === "undefined") return null
-  const refreshFromCookie = getCookie(REFRESH_TOKEN_KEY)
-  if (refreshFromCookie) return refreshFromCookie
-  try {
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function setStoredToken(
-  accessToken: string | null,
-  refreshToken?: string | null,
-) {
-  if (typeof window === "undefined") return
-  try {
-    if (accessToken) {
-      setCookie(TOKEN_KEY, accessToken, 7)
-      try {
-        localStorage.setItem(TOKEN_KEY, accessToken)
-      } catch {
-        /* ignore */
-      }
-    } else {
-      deleteCookie(TOKEN_KEY)
-      try {
-        localStorage.removeItem(TOKEN_KEY)
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (refreshToken !== undefined) {
-      if (refreshToken) {
-        setCookie(REFRESH_TOKEN_KEY, refreshToken, 7)
-        try {
-          localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-        } catch {
-          /* ignore */
-        }
-      } else {
-        deleteCookie(REFRESH_TOKEN_KEY)
-        try {
-          localStorage.removeItem(REFRESH_TOKEN_KEY)
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Axios instance for Kunemi Workspace Nest API */
 export const apiClient = axios.create({
@@ -83,33 +12,11 @@ export const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 30_000,
-})
-
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
+  withCredentials: true,
 })
 
 // Auto refresh interceptor on 401 Unauthorized
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (token: string) => void
-  reject: (err: unknown) => void
-}> = []
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else if (token) {
-      prom.resolve(token)
-    }
-  })
-  failedQueue = []
-}
+let refreshPromise: Promise<void> | null = null
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -122,41 +29,23 @@ apiClient.interceptors.response.use(
       originalRequest &&
       !originalRequest._retry
     ) {
-      const refreshToken = getStoredRefreshToken()
       if (
-        refreshToken &&
         !originalRequest.url?.includes("/auth/login") &&
-        !originalRequest.url?.includes("/auth/refresh")
+        !originalRequest.url?.includes("/auth/refresh") &&
+        !originalRequest.url?.includes("/auth/register")
       ) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject })
-          })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`
-              return apiClient(originalRequest)
-            })
-            .catch((err) => Promise.reject(err))
-        }
-
         originalRequest._retry = true
-        isRefreshing = true
-
         try {
-          const { data } = await axios.post<{
-            accessToken: string
-            refreshToken: string
-          }>(`${API_BASE}/auth/refresh`, { refreshToken })
-          setStoredToken(data.accessToken, data.refreshToken)
-          processQueue(null, data.accessToken)
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+          refreshPromise ??= axios
+            .post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true })
+            .then(() => undefined)
+            .finally(() => {
+              refreshPromise = null
+            })
+          await refreshPromise
           return apiClient(originalRequest)
         } catch (refreshErr) {
-          processQueue(refreshErr, null)
-          setStoredToken(null, null)
           return Promise.reject(refreshErr)
-        } finally {
-          isRefreshing = false
         }
       }
     }

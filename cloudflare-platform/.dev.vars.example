@@ -1,0 +1,4 @@
+# Copy this file to .dev.vars for `wrangler dev`, then replace both values.
+# Keep .dev.vars local; it is ignored by git.
+PLATFORM_SECRET=replace-with-a-long-random-local-secret
+ADMIN_API_KEY=replace-with-a-separate-long-random-local-admin-key

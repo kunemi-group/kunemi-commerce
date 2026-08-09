@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { PaymentStatusBadge } from "./status-badge"
 import type { Payment } from "@/lib/data"
 import { cn } from "@/lib/utils"
-import { API_BASE, getStoredToken } from "@/api"
+import { API_BASE } from "@/api"
 
 type ExtPayment = Payment & {
   _proofUrl?: string
@@ -56,7 +56,6 @@ export function PaymentProofDialog({
     }
   }
 
-  const token = getStoredToken()
   const proofSrc = ext?._proofUrl
     ? ext._proofUrl.includes("?")
       ? ext._proofUrl
@@ -85,7 +84,7 @@ export function PaymentProofDialog({
 
             <div className="flex-1 space-y-4 overflow-y-auto p-4 animate-fade-in">
               <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-secondary via-card to-muted">
-                {proofSrc && token ? (
+                {proofSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`${API_BASE}/payments/${payment.id}/proof`}
@@ -119,7 +118,7 @@ export function PaymentProofDialog({
                     <Row k="Note" v={ext?._customerNote ?? "—"} />
                     <Row k="Claimed" v={payment.updated} />
                   </div>
-                  {payment.proofLabel && token ? (
+                  {payment.proofLabel ? (
                     <a
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                       href={`${API_BASE}/payments/${payment.id}/proof`}
@@ -129,7 +128,7 @@ export function PaymentProofDialog({
                         e.preventDefault()
                         const res = await fetch(
                           `${API_BASE}/payments/${payment.id}/proof`,
-                          { headers: { Authorization: `Bearer ${token}` } },
+                          { credentials: "include" },
                         )
                         if (!res.ok) return
                         const blob = await res.blob()

@@ -21,7 +21,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'fs';
-import { dirname, extname, join } from 'path';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'path';
 
 export type UploadPurpose =
   | 'product'
@@ -155,6 +155,7 @@ export class StorageService implements OnModuleInit {
     const safe =
       (opts.filename || 'file')
         .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .replace(/\.\.+/g, '.')
         .slice(0, 60) || 'file';
     const id = randomUUID().slice(0, 8);
     return `businesses/${opts.businessId}/${opts.purpose}/${Date.now()}_${id}_${safe}${ext.startsWith('.') ? '' : ext}`.replace(
@@ -216,7 +217,10 @@ export class StorageService implements OnModuleInit {
     }
 
     // Local fallback
-    const abs = join(this.localRoot, key);
+    const abs = this.safeLocalPath(key);
+    if (!abs) {
+      throw new BadRequestException('Invalid storage key');
+    }
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, opts.buffer);
     return {
@@ -283,7 +287,8 @@ export class StorageService implements OnModuleInit {
       }
     }
 
-    const abs = join(this.localRoot, key);
+    const abs = this.safeLocalPath(key);
+    if (!abs) return null;
     if (!existsSync(abs)) return null;
     const ext = extname(abs).toLowerCase();
     const contentType =
@@ -320,10 +325,19 @@ export class StorageService implements OnModuleInit {
     }
 
     try {
-      const abs = join(this.localRoot, key);
+      const abs = this.safeLocalPath(key);
+      if (!abs) return;
       if (existsSync(abs)) unlinkSync(abs);
     } catch {
       /* ignore */
     }
+  }
+
+  private safeLocalPath(key: string): string | null {
+    const root = resolve(this.localRoot);
+    const abs = resolve(root, key);
+    const rel = relative(root, abs);
+    if (!rel || rel.startsWith('..') || isAbsolute(rel)) return null;
+    return abs;
   }
 }

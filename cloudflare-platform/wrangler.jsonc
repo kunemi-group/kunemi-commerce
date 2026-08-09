@@ -7,8 +7,7 @@
   "vars": {
     "BACKEND_API_URL": "http://localhost:3001",
     "WORKSPACE_UI_URL": "http://localhost:3000",
-    "SHOPFLOW_UI_URL": "http://localhost:3000",
-    "PLATFORM_SECRET": "kunemi-edge-secret-key-change-in-prod"
+    "SHOPFLOW_UI_URL": "http://localhost:3000"
   },
   "kv_namespaces": [
     {

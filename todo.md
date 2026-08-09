@@ -1,6 +1,6 @@
 # Kunemi Workspace — Project status & todo
 
-**Last updated:** 2026-07-26  
+**Last updated:** 2026-08-09
 **Product:** Kunemi Workspace under **Kunemi Commerce**  
 **Repo:** https://github.com/kunemi-group/kunemi-commerce.git  
 **Note:** `docs/` is gitignored (local confidential product docs only).
@@ -151,6 +151,160 @@ pnpm test           # Vitest (api layer + totals)
 ---
 
 ## Yet to be done
+
+### Security and architecture remediation plan
+
+Complete the P0 security work before production deployment or adding more public integrations. Each task should include automated regression coverage and a short deployment/rollback note where configuration or persistence changes.
+
+#### SEC-P0-01 — Remove public admin bootstrap
+
+- [x] Delete `POST /api/admin/seed` and remove `@Public()` from the admin bootstrap path.
+- [x] Remove `AdminService.seedSuperAdmin()` and every hardcoded admin email/password.
+- [x] Remove the frontend **Seed Admin Account (Dev)** button and `seedAdminAccount()` API client.
+- [ ] Replace HTTP seeding with an explicit CLI/deployment command requiring admin email and a generated password through secret-manager input.
+- [x] Add an e2e test proving unauthenticated users cannot create or promote platform administrators.
+- **Files:** `backend/src/admin/admin.controller.ts`, `backend/src/admin/admin.service.ts`, `frontend/components/admin/admin-auth.tsx`, `frontend/api/services/admin.ts`.
+- **Done when:** no public route, browser action, default credential, or production startup path can create a platform administrator.
+
+#### SEC-P0-02 — Rotate and validate secrets
+
+- [ ] Rotate the mail/provider credential currently present in `backend/.env` if it has ever been used.
+- [ ] Rotate production JWT, database, Cloudflare platform, R2, payment-provider, and admin API credentials.
+- [x] Keep only placeholders in `.env.example`; never store usable secrets in source-controlled files.
+- [x] Verify `.gitignore` excludes `.env*` except examples, SQLite databases, uploads, `.next`, `dist`, coverage, local logs, and Wrangler `.dev.vars`.
+- [x] Add startup configuration validation with separate development/test/production schemas.
+- [x] Remove fallback JWT and platform shared secrets; fail production startup when required values are absent, default-looking, or too short.
+- [ ] Add secret scanning to CI and pre-commit checks.
+- **Files:** `backend/.env.example`, auth configuration, edge-proxy configuration, `cloudflare-platform/wrangler.jsonc`.
+- **Done when:** production cannot start with fallback credentials and automated secret scanning passes.
+
+#### SEC-P0-03 — Make tenant isolation fail closed
+
+- [x] Stop swallowing tenant-context setup errors in `TenantContextInterceptor`; reject the request before business queries execute.
+- [ ] Replace connection-pool session GUC usage with request transactions/query runners using transaction-local context, or mandatory tenant-scoped repositories.
+- [ ] Ensure cleanup uses the same database connection and cannot leak tenant context to another request.
+- [ ] Require `{ id, businessId }` for all tenant-owned reads and mutations, including scheduled jobs and relation reloads.
+- [x] Add `businessId` to the order-expiry variant lookup and other ID-only tenant-owned queries.
+- [ ] Run PostgreSQL with a non-owner application role and enable/verify `FORCE ROW LEVEL SECURITY` where applicable.
+- [ ] Add concurrent cross-tenant tests for orders, products, variants, payments, proofs, deliveries, documents, chats, team members, and expiry processing.
+- **Files:** `backend/src/common/interceptors/tenant-context.interceptor.ts`, RLS files, all tenant module services.
+- **Done when:** tenant-context failure blocks requests and Business A cannot access Business B data during normal, concurrent, or scheduled execution.
+
+#### SEC-P0-04 — Replace schema synchronization with migrations
+
+- [x] Set TypeORM `synchronize: false` for PostgreSQL and all production environments.
+- [ ] Permit SQLite synchronization only in explicit local/test configuration if still needed.
+- [ ] Add a baseline migration for schema, indexes, constraints, and RLS policies.
+- [ ] Add migration generate/run/revert scripts.
+- [ ] Run migrations before application rollout with a role separate from the runtime role.
+- [ ] Test migration from a representative existing database and document rollback/restore.
+- **Files:** `backend/src/app.module.ts`, `backend/package.json`, new `backend/src/database/migrations/`.
+- **Done when:** production startup never modifies schema automatically and migrations can create a clean database.
+
+#### SEC-P0-05 — Move authentication to secure server-managed sessions
+
+- [x] Stop storing access and refresh tokens in `localStorage` or JavaScript-readable cookies.
+- [x] Set refresh/session cookies from the backend or a Next.js BFF with `HttpOnly`, `Secure`, `SameSite`, explicit `Path`, and bounded expiry.
+- [ ] Keep access tokens short-lived and in memory, or use opaque server-side browser sessions.
+- [x] Add CSRF protection for state-changing cookie-authenticated requests and enforce allowed origins.
+- [ ] Store refresh sessions per device with rotation, reuse detection, revocation, and token-family identifiers.
+- [ ] Revoke sessions after logout, password reset, or security-sensitive account changes.
+- [x] Make Next.js route protection validate a server-verifiable session rather than cookie presence.
+- [x] Remove legacy token-storage migration code after a bounded release.
+- **Files:** `frontend/api/client.ts`, `frontend/lib/cookies.ts`, `frontend/proxy.ts`, `frontend/lib/auth-context.tsx`, `backend/src/auth/`.
+- **Done when:** browser JavaScript cannot read long-lived credentials and auth/session/CSRF e2e tests pass.
+
+#### SEC-P1-01 — Harden login, OTP, registration, and recovery
+
+- [ ] Generate OTPs with `crypto.randomInt()` and store only a keyed hash/HMAC.
+- [ ] Add attempt limits, one-time consumption, resend cooldown, expiry, and previous-code invalidation.
+- [ ] Add IP- and account-aware rate limiting to register, login, admin login, verify, resend, refresh, public payment claims, and tracking.
+- [ ] Return consistent public responses to limit account enumeration.
+- [ ] Benchmark/document password hashing policy; consider Argon2id for new passwords.
+- [ ] Add password change/reset and security event logging.
+- **Files:** `backend/src/auth/`, `backend/src/database/entities/user.entity.ts`, `backend/src/main.ts`.
+- **Done when:** brute-force, OTP replay, refresh replay, and enumeration tests pass.
+
+#### SEC-P1-02 — Harden uploads and private media
+
+- [ ] Prefer multipart or direct-to-R2 signed uploads over base64 JSON.
+- [ ] Enforce body limits before decoding and decoded-size limits afterward.
+- [ ] Validate file signatures and re-encode images where practical; never trust client MIME type or filename.
+- [ ] Use generated keys and verify resolved local paths remain under the upload root.
+- [ ] Separate public product/brand assets from private proofs and documents.
+- [ ] Require tenant authorization or short-lived signed URLs for private objects.
+- [ ] Set safe `Content-Disposition`, `X-Content-Type-Options`, cache, and CSP headers.
+- [ ] Add malware scanning/quarantine hooks and adversarial upload tests.
+- **Files:** `backend/src/storage/`, `backend/src/payments/payments.service.ts`, `frontend/api/services/uploads.ts`.
+- **Done when:** only verified allowlisted content is stored and private media cannot be fetched anonymously or across tenants.
+
+#### SEC-P1-03 — Add platform HTTP security controls
+
+- [ ] Add CSP, HSTS in production, `nosniff`, frame restrictions, referrer policy, and permissions policy.
+- [ ] Validate `CORS_ORIGIN`; reject wildcard/malformed production configuration while credentials are enabled.
+- [ ] Disable or protect Swagger in production and disable persisted authorization outside local development.
+- [ ] Add request IDs, structured logs, secret/PII redaction, centralized exception mapping, and request-size limits.
+- [ ] Configure trusted proxies explicitly; never trust identity headers without authenticated proxy verification.
+- [ ] Allow only validated `https:` external tracking URLs.
+- **Files:** `backend/src/main.ts`, `backend/src/common/`, delivery DTOs, `frontend/next.config.mjs`.
+- **Done when:** security-header, CORS, redaction, proxy-header, and URL-validation tests pass.
+
+#### SEC-P1-04 — Complete server-side authorization policy
+
+- [ ] Define a route/action matrix for owner, manager, sales, ops, user, admin, and super-admin.
+- [ ] Apply policy guards across settings, inventory, orders, payments, deliveries, documents, chat, team, and admin.
+- [ ] Treat frontend gates only as presentation; enforce every privileged action in the backend.
+- [ ] Prevent deleting/demoting the last super-admin and require step-up authentication for destructive platform actions.
+- [ ] Add immutable audit events for admin, role, business, domain, payment, proof-access, and sensitive-setting actions.
+- [ ] Add table-driven authorization tests for every protected controller action.
+- **Done when:** the RBAC matrix is documented and every privileged endpoint has automated policy coverage.
+
+#### ARCH-P1-01 — Enforce frontend boundaries
+
+- [ ] Remove deprecated `frontend/lib/api.ts` after migrating remaining imports.
+- [ ] Keep `app/` pages focused on routing/composition; move domain UI/state into `features/<domain>`.
+- [ ] Keep transport types, query keys, client, and services in `frontend/api/` without UI dependencies.
+- [ ] Generate or validate frontend API types from the backend OpenAPI contract.
+- [ ] Replace `Record<string, unknown>` mutation inputs with explicit schemas/types.
+- [x] Remove `typescript.ignoreBuildErrors`; builds must fail on type errors.
+- [ ] Add ESLint import-boundary rules.
+- **Done when:** lint/type/build checks enforce boundaries and deprecated API helpers are gone.
+
+#### ARCH-P1-02 — Enforce backend boundaries
+
+- [ ] Choose and document one feature-module directory convention; avoid a partial restructuring.
+- [ ] Keep controllers limited to transport concerns and move workflows into application services/use cases.
+- [ ] Put persistence behind tenant-aware repositories.
+- [ ] Centralize configuration schemas, policies, tenant scoping, audit events, serializers, and exception handling.
+- [ ] Add constraints/indexes for state invariants, idempotency, unique public tokens, tenant relations, and common queries.
+- [ ] Add idempotency/concurrency controls to payments, webhooks, order transitions, stock, and scheduled expiry.
+- **Done when:** boundaries are documented, circular dependencies are absent, and concurrency/invariant tests pass.
+
+#### QA-P1-01 — Establish a mandatory security and quality CI gate
+
+- [x] Establish colocated unit-test coverage for security-sensitive services, guards, interceptors, and session helpers; keep cross-module HTTP behavior in `backend/test/` e2e suites.
+- [ ] Use one documented package-manager strategy per workspace and frozen lockfiles.
+- [ ] Backend gate: format check, lint without `--fix`, build/type check, unit/e2e tests, migration test, dependency audit.
+- [ ] Frontend gate: format check, lint, type check, Vitest, production build, dependency audit.
+- [ ] Add SAST, secret scanning, dependency updates, SBOM generation, and container/image scanning where applicable.
+- [ ] Run RLS and migration tests against ephemeral PostgreSQL.
+- [ ] Add smoke tests for health, auth, tenant isolation, admin denial, payments, private proofs, tracking, and secure headers.
+- [ ] Block deployment on failure and publish diagnostic artifacts/coverage.
+- **Done when:** a clean checkout passes without ignored type errors, dependency mutation, or manual database preparation.
+
+#### Recommended remediation sequence
+
+1. SEC-P0-01 public admin bootstrap removal.
+2. SEC-P0-02 secret rotation and startup validation.
+3. SEC-P0-03 tenant isolation redesign.
+4. SEC-P0-04 migrations and database roles.
+5. SEC-P0-05 secure browser sessions.
+6. SEC-P1-01 authentication abuse controls.
+7. SEC-P1-02 uploads/private media.
+8. SEC-P1-03 HTTP controls.
+9. SEC-P1-04 RBAC and auditing.
+10. ARCH-P1-01 and ARCH-P1-02 structural enforcement.
+11. QA-P1-01 CI gate; keep it active throughout all work.
 
 ### P0 — Close remaining Phase 1 gaps
 

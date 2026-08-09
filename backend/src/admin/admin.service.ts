@@ -378,35 +378,4 @@ export class AdminService {
     return { message: 'Platform admin user deleted successfully', id };
   }
 
-  /**
-   * Seed Super Admin Account (`admin@kunemi.com` / `admin123`)
-   */
-  async seedSuperAdmin() {
-    const email = 'admin@kunemi.com';
-    let user = await this.users.findOne({ where: { email } });
-
-    if (user) {
-      user.role = 'super_admin';
-      await this.users.save(user);
-      return { message: 'Super admin updated', email: user.email };
-    }
-
-    const passwordHash = await bcrypt.hash('admin123', 10);
-    user = this.users.create({
-      businessId: null,
-      email,
-      passwordHash,
-      fullName: 'Kunemi Platform Admin',
-      role: 'super_admin',
-    });
-
-    await this.users.save(user);
-    this.logger.log(`Created default Super Admin account: ${email}`);
-
-    return {
-      message: 'Super admin account created successfully',
-      email: user.email,
-      password: 'password123 (please change in prod)',
-    };
-  }
 }

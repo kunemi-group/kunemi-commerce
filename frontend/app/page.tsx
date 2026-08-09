@@ -19,12 +19,12 @@ export default function Page() {
   const router = useRouter()
 
   useEffect(() => {
-    if (role === "agent") {
+    if (role === "sales") {
       router.replace("/workspace")
     }
   }, [role, router])
 
-  if (role === "agent") {
+  if (role === "sales") {
     return (
       <DashboardShell title="Redirecting…" subtitle="Opening your sales workspace.">
         <div className="text-sm text-muted-foreground">Loading workspace…</div>

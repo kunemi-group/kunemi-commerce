@@ -19,10 +19,9 @@ export class TenantProvisionerService {
       'CLOUDFLARE_EDGE_ADMIN_URL',
       'http://localhost:8787/api/admin/tenants',
     );
-    this.edgeAdminKey = this.config.get<string>(
-      'CLOUDFLARE_EDGE_ADMIN_KEY',
-      this.config.get<string>('PLATFORM_SECRET', 'kunemi-edge-secret-key-change-in-prod'),
-    );
+    this.edgeAdminKey =
+      this.config.get<string>('CLOUDFLARE_EDGE_ADMIN_KEY') ??
+      this.config.get<string>('PLATFORM_SECRET', '');
   }
 
   /**
@@ -30,6 +29,10 @@ export class TenantProvisionerService {
    */
   async registerTenant(payload: ProvisionTenantPayload): Promise<boolean> {
     if (!payload.tenantId || !payload.slug) return false;
+    if (!this.edgeAdminKey) {
+      this.logger.warn('Cloudflare tenant provisioning is disabled: no edge admin key');
+      return false;
+    }
 
     try {
       const response = await fetch(this.edgeAdminUrl, {
@@ -67,6 +70,7 @@ export class TenantProvisionerService {
    * Deletes tenant mapping from Cloudflare KV
    */
   async unregisterTenant(tenantId: string): Promise<boolean> {
+    if (!this.edgeAdminKey) return false;
     try {
       const response = await fetch(`${this.edgeAdminUrl}/${tenantId}`, {
         method: 'DELETE',

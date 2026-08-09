@@ -13,7 +13,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Public } from '../common/decorators/public.decorator';
 import { AdminService } from './admin.service';
 import {
   AdminBusinessQueryDto,
@@ -93,9 +92,4 @@ export class AdminController {
     return this.adminService.deletePlatformAdmin(id);
   }
 
-  @Public()
-  @Post('seed')
-  seedAdmin() {
-    return this.adminService.seedSuperAdmin();
-  }
 }

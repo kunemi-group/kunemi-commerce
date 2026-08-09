@@ -1,4 +1,4 @@
-import { apiClient, setStoredToken, toApiError } from "../client"
+import { apiClient, toApiError } from "../client"
 import type {
   AuthMeResponse,
   BusinessProfile,
@@ -11,7 +11,6 @@ export async function loginRequest(email: string, password: string) {
       email,
       password,
     })
-    setStoredToken(data.accessToken, data.refreshToken)
     return data
   } catch (e) {
     throw toApiError(e)
@@ -27,7 +26,6 @@ export async function registerRequest(input: {
 }) {
   try {
     const { data } = await apiClient.post<TokenResponse>("/auth/register", input)
-    setStoredToken(data.accessToken, data.refreshToken)
     return data
   } catch (e) {
     throw toApiError(e)
@@ -60,7 +58,5 @@ export async function logoutLocal() {
     await apiClient.post("/auth/logout")
   } catch {
     /* ignore network errors during logout */
-  } finally {
-    setStoredToken(null, null)
   }
 }

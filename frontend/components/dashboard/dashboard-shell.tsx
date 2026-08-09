@@ -109,7 +109,7 @@ export function DashboardShell({
               <input
                 type="search"
                 placeholder={
-                  role === "agent"
+                  role === "sales"
                     ? "Search orders, chats, quotes…"
                     : "Search orders, customers…"
                 }
@@ -211,7 +211,7 @@ export function DashboardShell({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => router.push(role === "agent" ? "/workspace" : "/")}
+                  onClick={() => router.push(role === "sales" ? "/workspace" : "/")}
                 >
                   Home
                 </DropdownMenuItem>

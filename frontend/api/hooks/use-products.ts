@@ -67,6 +67,7 @@ export function useAddVariant() {
         taxExempt?: boolean
         lowStockThreshold?: number
         attributes?: Record<string, string>
+        imageKey?: string | null
       }
     }) => productsApi.addVariant(productId, payload),
     onSuccess: () => invalidateProducts(qc),

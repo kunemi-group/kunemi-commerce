@@ -2,17 +2,19 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import {
   Observable,
   from,
-  of,
   switchMap,
   catchError,
   finalize,
+  throwError,
 } from 'rxjs';
 import type { AuthUser } from '../types/auth-user';
 
@@ -24,6 +26,7 @@ import type { AuthUser } from '../types/auth-user';
  */
 @Injectable()
 export class TenantContextInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(TenantContextInterceptor.name);
   private readonly isPostgres: boolean;
 
   constructor(
@@ -42,12 +45,12 @@ export class TenantContextInterceptor implements NestInterceptor {
     const user = req.user;
 
     // Check Cloudflare Edge Proxy headers
-    const platformSecret = this.config.get<string>(
-      'PLATFORM_SECRET',
-      'kunemi-edge-secret-key-change-in-prod',
-    );
+    const platformSecret = this.config.get<string>('PLATFORM_SECRET', '');
     const reqSecret = req.headers['x-platform-secret'];
-    const isSignedByEdge = typeof reqSecret === 'string' && reqSecret === platformSecret;
+    const isSignedByEdge =
+      Boolean(platformSecret) &&
+      typeof reqSecret === 'string' &&
+      reqSecret === platformSecret;
     const edgeTenantId = isSignedByEdge && typeof req.headers['x-tenant-id'] === 'string'
       ? req.headers['x-tenant-id']
       : '';
@@ -76,7 +79,18 @@ export class TenantContextInterceptor implements NestInterceptor {
         ),
       ]),
     ).pipe(
-      catchError(() => of(null)),
+      catchError((error: unknown) => {
+        this.logger.error(
+          'Failed to establish tenant database context; request rejected',
+          error instanceof Error ? error.stack : undefined,
+        );
+        return throwError(
+          () =>
+            new ServiceUnavailableException(
+              'Tenant database context is unavailable',
+            ),
+        );
+      }),
       switchMap(() => next.handle()),
       finalize(() => {
         void Promise.all([

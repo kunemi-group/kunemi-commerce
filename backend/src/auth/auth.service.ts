@@ -22,7 +22,6 @@ import {
   RegisterDto,
   VerifyEmailDto,
   ResendOtpDto,
-  RefreshTokenDto,
 } from './dto/auth.dto';
 
 import { MailService } from '../mail/mail.service';
@@ -206,7 +205,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.users.findOne({
-      where: { email: dto.email.toLowerCase() },
+      where: { email: dto.email.toLowerCase().trim() },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -319,10 +318,10 @@ export class AuthService {
     };
   }
 
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(refreshToken: string) {
     let payload: { sub: string; tokenType?: string };
     try {
-      payload = this.jwt.verify(dto.refreshToken);
+      payload = this.jwt.verify(refreshToken);
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -340,7 +339,7 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has expired. Please sign in again.');
     }
 
-    const matches = await bcrypt.compare(dto.refreshToken, user.refreshTokenHash);
+    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
     if (!matches) {
       throw new UnauthorizedException('Invalid refresh token');
     }

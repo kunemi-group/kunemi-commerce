@@ -337,8 +337,6 @@ export type AuthMeResponse = {
 }
 
 export type TokenResponse = {
-  accessToken: string
-  refreshToken?: string
   user: AuthUser
 }
 

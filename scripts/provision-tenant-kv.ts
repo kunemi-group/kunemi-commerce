@@ -26,11 +26,16 @@ async function main() {
   const customDomain = args['domain'] || null;
 
   const adminUrl = args['admin-url'] || process.env.CLOUDFLARE_EDGE_ADMIN_URL || 'http://localhost:8787/api/admin/tenants';
-  const adminKey = args['admin-key'] || process.env.CLOUDFLARE_EDGE_ADMIN_KEY || process.env.PLATFORM_SECRET || 'kunemi-edge-secret-key-change-in-prod';
+  const adminKey = args['admin-key'] || process.env.CLOUDFLARE_EDGE_ADMIN_KEY || process.env.PLATFORM_SECRET;
 
   if (!tenantId || !slug) {
     console.error('Error: --tenant-id and --slug are required');
     console.log('Usage: npx tsx scripts/provision-tenant-kv.ts --tenant-id <id> --slug <slug> [--domain <customdomain>]');
+    process.exit(1);
+  }
+
+  if (!adminKey) {
+    console.error('Error: provide --admin-key or set CLOUDFLARE_EDGE_ADMIN_KEY/PLATFORM_SECRET');
     process.exit(1);
   }
 

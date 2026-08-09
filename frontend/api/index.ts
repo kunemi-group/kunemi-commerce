@@ -3,9 +3,6 @@
 export {
   apiClient,
   API_BASE,
-  TOKEN_KEY,
-  getStoredToken,
-  setStoredToken,
   getApiErrorMessage,
   toApiError,
 } from "./client"

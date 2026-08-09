@@ -20,7 +20,9 @@ import { AdminModule } from './admin/admin.module';
 import { MailModule } from './mail/mail.module';
 import { DatabaseModule } from './database/database.module';
 import { CommonModule } from './common/common.module';
+import { validateEnvironment } from './common/config/environment';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { CsrfOriginGuard } from './common/guards/csrf-origin.guard';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import {
   Business,
@@ -75,7 +77,7 @@ class RootController {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -100,6 +102,7 @@ class RootController {
           ChatMessage,
         ];
         const logging = config.get<string>('TYPEORM_LOGGING') === 'true';
+        const isProduction = config.get<string>('NODE_ENV') === 'production';
         // Prefer Postgres in prod; better-sqlite3 for local dev without Docker
         const dbType = config.get<string>('DATABASE_TYPE', 'postgres');
         if (dbType === 'sqlite' || dbType === 'better-sqlite3') {
@@ -107,7 +110,7 @@ class RootController {
             type: 'better-sqlite3',
             database: config.get<string>('SQLITE_PATH', 'shopflow.dev.sqlite'),
             entities,
-            synchronize: true,
+            synchronize: !isProduction,
             logging,
           };
         }
@@ -115,11 +118,12 @@ class RootController {
           type: 'postgres',
           host: config.get<string>('DATABASE_HOST', 'localhost'),
           port: Number(config.get<string>('DATABASE_PORT', '5432')),
-          username: config.get<string>('DATABASE_USER', 'Kunemi Workspace'),
-          password: config.get<string>('DATABASE_PASSWORD', 'Kunemi Workspace'),
-          database: config.get<string>('DATABASE_NAME', 'Kunemi Workspace'),
+          username: config.get<string>('DATABASE_USER', 'shopflow'),
+          password: config.getOrThrow<string>('DATABASE_PASSWORD'),
+          database: config.get<string>('DATABASE_NAME', 'shopflow'),
           entities,
-          synchronize: true, // dev only — switch to migrations for prod
+          synchronize: false,
+          migrationsRun: false,
           logging,
         };
       },
@@ -145,6 +149,7 @@ class RootController {
   controllers: [RootController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: CsrfOriginGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
   ],
 })

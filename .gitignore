@@ -17,6 +17,7 @@ coverage/
 backend/.env
 frontend/.env
 frontend/.env.local
+cloudflare-platform/.dev.vars
 
 # Local databases & uploads
 *.sqlite

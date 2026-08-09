@@ -3,14 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { AuthUser, JwtPayload } from '../common/types/auth-user';
+import { accessTokenFromRequest } from './session-cookies';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        accessTokenFromRequest,
+      ]),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET', 'kunemi-workspace-dev-secret'),
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
     });
   }
 

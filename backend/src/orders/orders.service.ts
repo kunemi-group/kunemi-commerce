@@ -446,7 +446,10 @@ export class OrdersService {
           if (!item.variantId) continue;
           const variant = await variantRepo.findOne(
             this.findOpts({
-              where: { id: item.variantId },
+              where: {
+                id: item.variantId,
+                businessId: locked.businessId,
+              },
             }),
           );
           if (variant) {
@@ -526,4 +529,3 @@ export class OrdersService {
     };
   }
 }
-

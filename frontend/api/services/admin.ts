@@ -56,7 +56,8 @@ export interface PlatformAdminUser {
 }
 
 export async function fetchAdminMetrics(): Promise<PlatformMetrics> {
-  return apiClient.get<PlatformMetrics>('/admin/metrics');
+  const { data } = await apiClient.get<PlatformMetrics>('/admin/metrics');
+  return data;
 }
 
 export async function fetchAdminMerchants(params?: {
@@ -74,39 +75,44 @@ export async function fetchAdminMerchants(params?: {
   if (params?.limit) query.set('limit', String(params.limit));
 
   const url = `/admin/businesses${query.toString() ? `?${query.toString()}` : ''}`;
-  return apiClient.get<AdminMerchantListResponse>(url);
+  const { data } = await apiClient.get<AdminMerchantListResponse>(url);
+  return data;
 }
 
 export async function updateMerchantStatus(
   id: string,
   status: 'active' | 'suspended' | 'pending',
 ) {
-  return apiClient.patch<{ id: string; status: string }>(`/admin/businesses/${id}/status`, {
+  const { data } = await apiClient.patch<{ id: string; status: string }>(`/admin/businesses/${id}/status`, {
     status,
   });
+  return data;
 }
 
 export async function updateMerchantTier(
   id: string,
   subscriptionTier: 'starter' | 'growth' | 'scale',
 ) {
-  return apiClient.patch<{ id: string; tier: string }>(`/admin/businesses/${id}/tier`, {
+  const { data } = await apiClient.patch<{ id: string; tier: string }>(`/admin/businesses/${id}/tier`, {
     subscriptionTier,
   });
+  return data;
 }
 
 export async function setMerchantCustomDomain(
   id: string,
   customDomain: string | null,
 ) {
-  return apiClient.post<{ id: string; customDomain: string | null }>(
+  const { data } = await apiClient.post<{ id: string; customDomain: string | null }>(
     `/admin/businesses/${id}/custom-domain`,
     { customDomain },
   );
+  return data;
 }
 
 export async function fetchAdminUsers(): Promise<{ admins: PlatformAdminUser[] }> {
-  return apiClient.get<{ admins: PlatformAdminUser[] }>('/admin/users');
+  const { data } = await apiClient.get<{ admins: PlatformAdminUser[] }>('/admin/users');
+  return data;
 }
 
 export async function createAdminUserRequest(input: {
@@ -115,13 +121,11 @@ export async function createAdminUserRequest(input: {
   fullName: string;
   role: 'admin' | 'super_admin';
 }): Promise<PlatformAdminUser> {
-  return apiClient.post<PlatformAdminUser>('/admin/users', input);
+  const { data } = await apiClient.post<PlatformAdminUser>('/admin/users', input);
+  return data;
 }
 
 export async function deleteAdminUserRequest(id: string): Promise<{ message: string; id: string }> {
-  return apiClient.delete<{ message: string; id: string }>(`/admin/users/${id}`);
-}
-
-export async function seedAdminAccount() {
-  return apiClient.post<{ message: string; email: string }>('/admin/seed', {});
+  const { data } = await apiClient.delete<{ message: string; id: string }>(`/admin/users/${id}`);
+  return data;
 }

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { ShieldAlert, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { seedAdminAccount } from '@/api/services/admin';
 
 export function AdminAuthGate({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -49,21 +48,6 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
               }}
             >
               Sign In as Platform Admin
-            </Button>
-
-            <Button
-              variant="outline"
-              className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-              onClick={async () => {
-                try {
-                  const res = await seedAdminAccount();
-                  alert(`Seed Result: ${res.message}\nEmail: ${res.email}\nDefault Password: admin123`);
-                } catch {
-                  alert('Could not trigger seed. Ensure API is running.');
-                }
-              }}
-            >
-              Seed Admin Account (Dev)
             </Button>
           </div>
         </div>

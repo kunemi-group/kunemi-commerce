@@ -689,11 +689,13 @@ function Field({
   value,
   onChange,
   disabled,
+  placeholder,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   disabled?: boolean
+  placeholder?: string
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -702,6 +704,7 @@ function Field({
         type="text"
         value={value}
         disabled={disabled}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
       />

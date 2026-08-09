@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, IsUrl } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateDeliveryDto {
@@ -18,6 +18,7 @@ export class CreateDeliveryDto {
   @ApiPropertyOptional({ example: 'https://track.gokada.ng/GK-982103', description: 'External courier tracking URL' })
   @IsOptional()
   @IsString()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
   externalTrackingUrl?: string;
 
   @ApiPropertyOptional({ example: 'Gokada Express', description: 'External courier display name' })
@@ -56,6 +57,7 @@ export class UpdateDeliveryStatusDto {
   @ApiPropertyOptional({ example: 'https://track.gokada.ng/GK-982103' })
   @IsOptional()
   @IsString()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
   externalTrackingUrl?: string;
 
   @ApiPropertyOptional({ example: 'Gokada Express' })
