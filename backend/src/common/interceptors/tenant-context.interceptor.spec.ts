@@ -20,15 +20,21 @@ function makeConfig(databaseType = 'postgres') {
 }
 
 function makeRunner() {
-  return {
+  const runner = {
+    isReleased: false,
+    isTransactionActive: true,
     manager: {},
     connect: jest.fn().mockResolvedValue(undefined),
     startTransaction: jest.fn().mockResolvedValue(undefined),
     query: jest.fn().mockResolvedValue([]),
     commitTransaction: jest.fn().mockResolvedValue(undefined),
     rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-    release: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn().mockImplementation(async () => {
+      runner.isReleased = true;
+      runner.isTransactionActive = false;
+    }),
   };
+  return runner;
 }
 
 describe('TenantContextInterceptor', () => {
@@ -107,6 +113,45 @@ describe('TenantContextInterceptor', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(next.handle).not.toHaveBeenCalled();
     expect(runner.release).toHaveBeenCalled();
+  });
+
+  it('does not attempt transaction cleanup on an already released runner', async () => {
+    const runner = makeRunner();
+    const dataSource = {
+      isInitialized: true,
+      createQueryRunner: jest.fn().mockReturnValue(runner),
+      transaction: jest.fn(),
+    };
+    const reflector = { getAllAndOverride: jest.fn().mockReturnValue(false) };
+    const tenantContext = {
+      current: undefined,
+      run: jest.fn((_context, callback) => callback()),
+    };
+    const interceptor = new TenantContextInterceptor(
+      dataSource as never,
+      makeConfig() as never,
+      reflector as never,
+      tenantContext as never,
+    );
+    const next = {
+      handle: () => ({
+        subscribe: ({ error }: { error: (value: Error) => void }) => {
+          runner.isReleased = true;
+          runner.isTransactionActive = false;
+          error(new Error('request aborted'));
+        },
+      }),
+    };
+
+    await expect(
+      firstValueFrom(
+        interceptor.intercept(
+          executionContext({ user: { businessId: 'business-1', sub: 'user-1' }, headers: {} }),
+          next as never,
+        ),
+      ),
+    ).rejects.toThrow('request aborted');
+    expect(runner.rollbackTransaction).not.toHaveBeenCalled();
   });
 
   it('skips database transactions for SQLite', async () => {

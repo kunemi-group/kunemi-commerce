@@ -73,17 +73,24 @@ export class TenantContextInterceptor implements NestInterceptor {
         if (settled) return;
         settled = true;
         try {
-          if (error) {
+          if (queryRunner.isReleased) {
+            if (error) subscriber.error(error);
+            else subscriber.complete();
+          } else if (error && queryRunner.isTransactionActive) {
             await queryRunner.rollbackTransaction();
             subscriber.error(error);
-          } else {
+          } else if (!error && queryRunner.isTransactionActive) {
             await queryRunner.commitTransaction();
+            subscriber.complete();
+          } else if (error) {
+            subscriber.error(error);
+          } else {
             subscriber.complete();
           }
         } catch (transactionError) {
           subscriber.error(transactionError);
         } finally {
-          await queryRunner.release();
+          if (!queryRunner.isReleased) await queryRunner.release();
         }
       };
 
