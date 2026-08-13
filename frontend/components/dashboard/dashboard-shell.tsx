@@ -51,7 +51,7 @@ export function DashboardShell({
 
   function switchRole(next: AppRole) {
     setRole(next)
-    if (next === "agent" && pathname === "/") {
+    if ((next === "sales" || next === "ops") && pathname === "/") {
       router.push("/workspace")
     }
     if (next === "owner" && pathname === "/workspace") {
@@ -109,7 +109,7 @@ export function DashboardShell({
               <input
                 type="search"
                 placeholder={
-                  role === "agent"
+                  role === "sales"
                     ? "Search orders, chats, quotes…"
                     : "Search orders, customers…"
                 }
@@ -138,12 +138,21 @@ export function DashboardShell({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Preview as</DropdownMenuLabel>
+                  <DropdownMenuLabel>Preview Role</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => switchRole("owner")}>
-                    Owner — analytics home
+                    Owner — Full Admin Dashboard
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => switchRole("agent")}>
-                    Sales teammate — dense workspace
+                  <DropdownMenuItem onClick={() => switchRole("manager")}>
+                    Manager — Store Operations
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => switchRole("sales")}>
+                    Sales — Dense Workspace
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => switchRole("ops")}>
+                    Ops — Fulfillment & Delivery
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => switchRole("admin")}>
+                    Platform Admin — System Control
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -202,7 +211,7 @@ export function DashboardShell({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => router.push(role === "agent" ? "/workspace" : "/")}
+                  onClick={() => router.push(role === "sales" ? "/workspace" : "/")}
                 >
                   Home
                 </DropdownMenuItem>

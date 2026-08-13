@@ -40,6 +40,7 @@ import {
   flattenInventory,
   getApiErrorMessage,
   useDeleteProduct,
+  useMoney,
   useProducts,
   useRestockVariant,
 } from "@/api"
@@ -52,6 +53,7 @@ export function InventoryTable({
   onRequestCreate?: () => void
 } = {}) {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const [active, setActive] = useState<FilterKey>("all")
   const [query, setQuery] = useState("")
   const [formMode, setFormMode] = useState<ProductFormMode | null>(null)
@@ -64,7 +66,10 @@ export function InventoryTable({
   } = useProducts(isAuthenticated)
   const restockMutation = useRestockVariant()
   const deleteMutation = useDeleteProduct()
-  const inventory = useMemo(() => flattenInventory(products), [products])
+  const inventory = useMemo(
+    () => flattenInventory(products, money.currency),
+    [products, money.currency],
+  )
   const error = queryError
     ? getApiErrorMessage(queryError)
     : restockMutation.error

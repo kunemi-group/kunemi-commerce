@@ -15,15 +15,12 @@ import {
   logoutLocal,
   registerRequest,
   updateBusinessRequest,
-  getStoredToken,
-  setStoredToken,
   queryKeys,
   type AuthUser,
   type BusinessProfile,
 } from "@/api"
 
 type AuthContextValue = {
-  token: string | null
   user: AuthUser | null
   business: BusinessProfile | null
   loading: boolean
@@ -40,10 +37,9 @@ type AuthContextValue = {
     password: string
     whatsappNumber?: string
   }) => Promise<{ onboardingComplete: boolean }>
-  logout: () => void
+  logout: () => Promise<void>
   refresh: () => Promise<void>
   updateBusiness: (patch: Record<string, unknown>) => Promise<BusinessProfile>
-  getToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -52,34 +48,25 @@ export type { AuthUser, BusinessProfile }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
-  const [token, setToken] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const applySession = useCallback(async (accessToken: string) => {
-    setStoredToken(accessToken)
-    const me = await fetchMe()
-    setToken(accessToken)
-    setUser(me.user)
-    setBusiness(me.business)
-    queryClient.setQueryData(queryKeys.me, me)
-  }, [queryClient])
+  const applySession = useCallback(
+    async () => {
+      const me = await fetchMe()
+      setUser(me.user)
+      setBusiness(me.business)
+      queryClient.setQueryData(queryKeys.me, me)
+      return me
+    },
+    [queryClient],
+  )
 
   const refresh = useCallback(async () => {
-    const stored = getStoredToken()
-    if (!stored) {
-      setToken(null)
-      setUser(null)
-      setBusiness(null)
-      setLoading(false)
-      return
-    }
     try {
-      await applySession(stored)
+      await applySession()
     } catch {
-      logoutLocal()
-      setToken(null)
       setUser(null)
       setBusiness(null)
       queryClient.clear()
@@ -96,9 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       setLoading(true)
       try {
-        const res = await loginRequest(email, password)
-        await applySession(res.accessToken)
-        const me = await fetchMe()
+        await loginRequest(email, password)
+        const me = await applySession()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
         }
@@ -119,9 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }) => {
       setLoading(true)
       try {
-        const res = await registerRequest(input)
-        await applySession(res.accessToken)
-        const me = await fetchMe()
+        await registerRequest(input)
+        const me = await applySession()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
         }
@@ -132,9 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession],
   )
 
-  const logout = useCallback(() => {
-    logoutLocal()
-    setToken(null)
+  const logout = useCallback(async () => {
+    await logoutLocal()
     setUser(null)
     setBusiness(null)
     queryClient.clear()
@@ -142,33 +126,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateBusiness = useCallback(
     async (patch: Record<string, unknown>) => {
-      if (!getStoredToken()) throw new Error("Not signed in")
+      if (!user) throw new Error("Not signed in")
       const updated = await updateBusinessRequest(patch)
       setBusiness(updated)
       void queryClient.invalidateQueries({ queryKey: queryKeys.me })
       void queryClient.invalidateQueries({ queryKey: queryKeys.business })
       return updated
     },
-    [queryClient],
+    [queryClient, user],
   )
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
       user,
       business,
       loading,
-      isAuthenticated: Boolean(token && user),
+      isAuthenticated: Boolean(user),
       onboardingComplete: Boolean(business?.onboarding?.complete),
       login,
       register,
       logout,
       refresh,
       updateBusiness,
-      getToken: () => token ?? getStoredToken(),
     }),
     [
-      token,
       user,
       business,
       loading,

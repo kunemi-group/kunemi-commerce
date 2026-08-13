@@ -12,7 +12,6 @@ import {
   DeliveryStatusEvent,
 } from './entities';
 import { SeedService } from './seed.service';
-import { RlsService } from './rls.service';
 
 @Module({
   imports: [
@@ -28,7 +27,7 @@ import { RlsService } from './rls.service';
       DeliveryStatusEvent,
     ]),
   ],
-  providers: [SeedService, RlsService],
+  providers: [SeedService],
   exports: [TypeOrmModule],
 })
 export class DatabaseModule {}

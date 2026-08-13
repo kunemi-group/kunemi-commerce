@@ -39,7 +39,6 @@ import { documentShareMessage } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import {
-  formatNgn,
   getApiErrorMessage,
   toUiInvoice,
   toUiQuotation,
@@ -47,6 +46,7 @@ import {
   useConvertQuotation,
   useInvoices,
   useMarkInvoicePaid,
+  useMoney,
   useQuotations,
   useSendInvoice,
   useSendQuotation,
@@ -97,6 +97,7 @@ function formatDate(iso: string | null) {
 
 export function QuotationsTable() {
   const { isAuthenticated, business } = useAuth()
+  const money = useMoney()
   const {
     data: quotations = [],
     isLoading,
@@ -190,7 +191,7 @@ export function QuotationsTable() {
                   {row.channel}
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
-                  {formatNgn(row.totalCents)}
+                  {money.format(row.totalCents)}
                 </TableCell>
                 <TableCell>
                   <Pill className={quoteStyles[row.status]}>{row.status}</Pill>
@@ -223,7 +224,7 @@ export function QuotationsTable() {
         <ShareBar
           kind="quotation"
           docId={share.id}
-          doc={toUiQuotation(share)}
+          doc={toUiQuotation(share, money.currency)}
           businessName={business?.name ?? "Business"}
           onClose={() => setShareId(null)}
         />
@@ -234,6 +235,7 @@ export function QuotationsTable() {
 
 export function InvoicesTable() {
   const { isAuthenticated, business } = useAuth()
+  const money = useMoney()
   const {
     data: invoices = [],
     isLoading,
@@ -327,7 +329,7 @@ export function InvoicesTable() {
                   {row.quotationId ? row.quotationId.slice(0, 8) : "—"}
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
-                  {formatNgn(row.totalCents)}
+                  {money.format(row.totalCents)}
                 </TableCell>
                 <TableCell>
                   <Pill className={invoiceStyles[row.status]}>{row.status}</Pill>
@@ -360,7 +362,7 @@ export function InvoicesTable() {
         <ShareBar
           kind="invoice"
           docId={share.id}
-          doc={toUiInvoice(share)}
+          doc={toUiInvoice(share, money.currency)}
           businessName={business?.name ?? "Business"}
           onClose={() => setShareId(null)}
         />

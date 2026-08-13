@@ -1,5 +1,5 @@
 import type { Invoice, Quotation, QuoteLine } from "@/lib/data"
-import { formatNgn, relativeTime } from "./format"
+import { formatMoney, minorToMajor, relativeTime } from "./format"
 import type { ApiInvoice, ApiQuotation } from "./types"
 
 function formatDate(iso: string | null | undefined): string {
@@ -18,30 +18,32 @@ function mapLines(
     unitPriceCents: number
     taxExempt: boolean
   }>,
+  currency: string,
 ): QuoteLine[] {
   return items.map((i) => ({
     name: i.description,
     qty: i.quantity,
-    unitPrice: formatNgn(i.unitPriceCents),
+    unitPrice: formatMoney(i.unitPriceCents, currency),
     taxExempt: i.taxExempt,
   }))
 }
 
 /** Map API quotation → PDF / share UI shape (lib/data Quotation). */
-export function toUiQuotation(q: ApiQuotation): Quotation {
+export function toUiQuotation(q: ApiQuotation, currency = "NGN"): Quotation {
   return {
     id: q.reference,
     customer: q.customerName,
     email: q.customerEmail ?? undefined,
     phone: q.customerPhone ?? undefined,
     address: q.deliveryAddress ?? undefined,
-    total: formatNgn(q.totalCents),
+    total: formatMoney(q.totalCents, currency),
     status: q.status,
     validUntil: formatDate(q.validUntil),
     channel: (q.channel as Quotation["channel"]) || "whatsapp",
     paymentMethods: q.paymentMethods?.length ? q.paymentMethods : ["transfer"],
-    lines: mapLines(q.items ?? []),
-    shippingFee: Math.round(q.shippingFeeCents / 100),
+    lines: mapLines(q.items ?? [], currency),
+    shippingFee: minorToMajor(q.shippingFeeCents, currency),
+    currency,
     created: relativeTime(q.createdAt),
     owner: q.ownerName ?? "—",
     notes: q.notes ?? undefined,
@@ -50,14 +52,14 @@ export function toUiQuotation(q: ApiQuotation): Quotation {
 }
 
 /** Map API invoice → PDF / share UI shape. */
-export function toUiInvoice(inv: ApiInvoice): Invoice {
+export function toUiInvoice(inv: ApiInvoice, currency = "NGN"): Invoice {
   return {
     id: inv.reference,
     customer: inv.customerName,
     email: inv.customerEmail ?? undefined,
     phone: inv.customerPhone ?? undefined,
     address: inv.deliveryAddress ?? undefined,
-    total: formatNgn(inv.totalCents),
+    total: formatMoney(inv.totalCents, currency),
     status: inv.status,
     dueDate: formatDate(inv.dueAt),
     channel: (inv.channel as Invoice["channel"]) || "whatsapp",
@@ -68,11 +70,14 @@ export function toUiInvoice(inv: ApiInvoice): Invoice {
     quoteId: inv.quotationId ?? undefined,
     created: relativeTime(inv.createdAt),
     owner: inv.ownerName ?? "—",
-    lines: mapLines(inv.items ?? []),
-    shippingFee: Math.round(inv.shippingFeeCents / 100),
+    lines: mapLines(inv.items ?? [], currency),
+    shippingFee: minorToMajor(inv.shippingFeeCents, currency),
+    currency,
     notes: inv.notes ?? undefined,
     issueDate: formatDate(inv.createdAt),
     amountPaid:
-      inv.amountPaidCents > 0 ? formatNgn(inv.amountPaidCents) : undefined,
+      inv.amountPaidCents > 0
+        ? formatMoney(inv.amountPaidCents, currency)
+        : undefined,
   }
 }

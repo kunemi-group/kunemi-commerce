@@ -35,7 +35,7 @@ import { EmptyState } from "./empty-state"
 import type { Payment, PaymentStatus } from "@/lib/data"
 import {
   API_BASE,
-  formatNgn,
+  useMoney,
   usePayments,
   useRejectPayment,
   useVerifyPayment,
@@ -69,14 +69,14 @@ function mapApiStatus(s: string): PaymentStatus {
   }
 }
 
-function mapApiRow(p: ApiPayment): Payment {
+function mapApiRow(p: ApiPayment, format: (cents: number) => string): Payment {
   return {
     id: p.id,
     orderId: p.orderId.slice(0, 8),
     customer: p.order?.customerName ?? "Customer",
     agent: "Team",
     method: p.method === "card" ? "card" : "manual_transfer",
-    amount: formatNgn(p.amountCents),
+    amount: format(p.amountCents),
     status: mapApiStatus(p.status),
     reference: p.reference,
     proofLabel: p.hasProof ? p.proofFilename ?? "proof" : undefined,
@@ -103,6 +103,7 @@ export function PaymentsTable({
   defaultFilter?: FilterKey
 }) {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const [active, setActive] = useState<FilterKey>(defaultFilter)
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<Payment | null>(null)
@@ -115,7 +116,10 @@ export function PaymentsTable({
   const verifyMutation = useVerifyPayment()
   const rejectMutation = useRejectPayment()
 
-  const rowsData = useMemo(() => payments.map(mapApiRow), [payments])
+  const rowsData = useMemo(
+    () => payments.map((p) => mapApiRow(p, money.format)),
+    [payments, money],
+  )
   const error = queryError
     ? queryError instanceof Error
       ? queryError.message

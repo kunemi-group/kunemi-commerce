@@ -45,7 +45,10 @@ export function computeDocTotals(opts: {
   taxRatePercent: number
   taxLabel: string
   amountPaid?: string
+  /** ISO currency for labels (default NGN) */
+  currency?: string
 }): DocTotals {
+  const currency = opts.currency ?? "NGN"
   let merchandise = 0
   let taxable = 0
   let exempt = 0
@@ -94,16 +97,18 @@ export function computeDocTotals(opts: {
     total,
     paid,
     balance,
-    subtotalLabel: formatMoney(merchandise),
-    taxableLabel: formatMoney(taxable),
-    exemptLabel: formatMoney(exempt),
-    shippingLabel: formatMoney(shipping),
+    subtotalLabel: formatMoney(merchandise, currency),
+    taxableLabel: formatMoney(taxable, currency),
+    exemptLabel: formatMoney(exempt, currency),
+    shippingLabel: formatMoney(shipping, currency),
     taxAmountLabel:
-      opts.taxEnabled && opts.taxRatePercent > 0 ? formatMoney(tax) : "—",
+      opts.taxEnabled && opts.taxRatePercent > 0
+        ? formatMoney(tax, currency)
+        : "—",
     taxName: taxDisplayName(opts.taxLabel, opts.taxRatePercent, opts.taxEnabled),
-    totalLabel: formatMoney(total),
-    paidLabel: formatMoney(paid),
-    balanceLabel: formatMoney(balance),
+    totalLabel: formatMoney(total, currency),
+    paidLabel: formatMoney(paid, currency),
+    balanceLabel: formatMoney(balance, currency),
     hasExemptLines,
     hasShipping: shipping > 0,
   }

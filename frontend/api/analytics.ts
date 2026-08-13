@@ -1,4 +1,5 @@
 import type { ApiOrder, ApiPayment } from "./types"
+import { minorToMajor } from "./format"
 
 const CONFIRMED = new Set(["paid", "shipped", "delivered"])
 
@@ -10,10 +11,11 @@ function localDateKey(d: Date) {
   return `${y}-${m}-${day}`
 }
 
-/** Last N calendar days of confirmed revenue (naira) + order counts. */
+/** Last N calendar days of confirmed revenue (major units) + order counts. */
 export function buildRevenueSeries(
   orders: ApiOrder[],
   days = 14,
+  currency = "NGN",
 ): Array<{ date: string; revenue: number; orders: number }> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -30,7 +32,7 @@ export function buildRevenueSeries(
     const key = localDateKey(new Date(o.createdAt))
     const bucket = buckets.get(key)
     if (!bucket) continue
-    bucket.revenue += Math.round(o.totalCents / 100)
+    bucket.revenue += minorToMajor(o.totalCents, currency)
     bucket.orders += 1
   }
 

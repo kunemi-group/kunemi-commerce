@@ -11,7 +11,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { useAuth } from "@/lib/auth-context"
-import { buildRevenueSeries, useOrders } from "@/api"
+import { buildRevenueSeries, useMoney, useOrders } from "@/api"
 
 const config = {
   revenue: { label: "Revenue", color: "var(--chart-1)" },
@@ -20,8 +20,12 @@ const config = {
 
 export function RevenueChart() {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: orders = [], isLoading } = useOrders(isAuthenticated)
-  const series = useMemo(() => buildRevenueSeries(orders, 14), [orders])
+  const series = useMemo(
+    () => buildRevenueSeries(orders, 14, money.currency),
+    [orders, money.currency],
+  )
   const hasData = series.some((d) => d.orders > 0 || d.revenue > 0)
 
   return (
@@ -83,7 +87,7 @@ export function RevenueChart() {
                 axisLine={false}
                 width={44}
                 tickFormatter={(v) =>
-                  v >= 1000 ? `₦${(v / 1000).toFixed(0)}k` : `₦${v}`
+                  v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
                 }
                 className="text-xs"
               />
@@ -98,7 +102,7 @@ export function RevenueChart() {
                         <span className="text-muted-foreground capitalize">{name}</span>
                         <span className="font-medium tabular-nums">
                           {name === "revenue"
-                            ? `₦${Number(value).toLocaleString()}`
+                            ? money.formatMajor(Number(value) || 0)
                             : Number(value).toLocaleString()}
                         </span>
                       </div>

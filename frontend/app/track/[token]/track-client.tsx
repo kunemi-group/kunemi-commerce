@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { DeliveryStatusBadge } from "@/components/dashboard/status-badge"
 import { whatsappDeepLink, whatsappDigits } from "@/lib/whatsapp"
 import { TrackShareButton } from "@/components/dashboard/track-share-button"
-import { formatNgn, shortId, usePublicTracking } from "@/api"
+import { formatMoney, shortId, usePublicTracking } from "@/api"
 
 export function TrackPageClient({ token }: { token: string }) {
   const {
@@ -179,7 +179,10 @@ export function TrackPageClient({ token }: { token: string }) {
                     {item.qty}× {item.name}
                   </span>
                   <span className="tabular-nums">
-                    {formatNgn(item.unitPriceCents * item.qty)}
+                    {formatMoney(
+                      item.unitPriceCents * item.qty,
+                      data.currency ?? "NGN",
+                    )}
                   </span>
                 </div>
               ))}

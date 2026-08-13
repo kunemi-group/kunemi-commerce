@@ -24,15 +24,16 @@ import { useRole } from "@/lib/role-context"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
 import {
-  formatNgn,
   minutesLeft,
   shortId,
+  useMoney,
   useOrders,
 } from "@/api"
 
 export default function WorkspacePage() {
   const { user, dense } = useRole()
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const [createOpen, setCreateOpen] = useState(false)
   const [preset, setPreset] = useState<{ customer?: string; phone?: string }>({})
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -175,7 +176,7 @@ export default function WorkspacePage() {
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                         <span className="truncate">{order.customerName}</span>
                         <span className="tabular-nums font-medium text-foreground">
-                          {formatNgn(order.totalCents)}
+                          {money.format(order.totalCents)}
                         </span>
                       </div>
                       {order.status === "pending" && hold != null ? (

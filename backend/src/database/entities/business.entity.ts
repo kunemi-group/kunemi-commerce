@@ -94,6 +94,17 @@ export class Business {
   @Column({ name: 'store_enabled', type: 'boolean', default: true })
   storeEnabled!: boolean;
 
+  /** Platform status: active, suspended, or pending */
+  @Column({ type: 'text', default: 'active' })
+  status!: 'active' | 'suspended' | 'pending';
+
+  /** Custom vanity domain (e.g. shop.lagosthreads.co) */
+  @Column({ name: 'custom_domain', type: 'text', nullable: true, unique: true })
+  customDomain!: string | null;
+
+  @Column({ name: 'custom_domain_status', type: 'text', nullable: true })
+  customDomainStatus!: 'pending' | 'verified' | 'failed' | null;
+
   /** Storage key for logo (R2/local) */
   @Column({ name: 'logo_key', type: 'text', nullable: true })
   logoKey!: string | null;

@@ -5,6 +5,7 @@
 export {
   API_BASE,
   formatNgn,
+  formatMoney,
   shortId,
   minutesLeft,
   relativeTime,

@@ -4,27 +4,6 @@ export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "http://localhost:3001/api"
 
-export const TOKEN_KEY = "kunemi_workspace_token"
-
-export function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null
-  try {
-    return localStorage.getItem(TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function setStoredToken(token: string | null) {
-  if (typeof window === "undefined") return
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-    else localStorage.removeItem(TOKEN_KEY)
-  } catch {
-    /* ignore */
-  }
-}
-
 /** Axios instance for Kunemi Workspace Nest API */
 export const apiClient = axios.create({
   baseURL: API_BASE,
@@ -33,15 +12,46 @@ export const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 30_000,
+  withCredentials: true,
 })
 
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+// Auto refresh interceptor on 401 Unauthorized
+let refreshPromise: Promise<void> | null = null
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      if (
+        !originalRequest.url?.includes("/auth/login") &&
+        !originalRequest.url?.includes("/auth/refresh") &&
+        !originalRequest.url?.includes("/auth/register")
+      ) {
+        originalRequest._retry = true
+        try {
+          refreshPromise ??= axios
+            .post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true })
+            .then(() => undefined)
+            .finally(() => {
+              refreshPromise = null
+            })
+          await refreshPromise
+          return apiClient(originalRequest)
+        } catch (refreshErr) {
+          return Promise.reject(refreshErr)
+        }
+      }
+    }
+    return Promise.reject(error)
+  },
+)
 
 export function getApiErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {

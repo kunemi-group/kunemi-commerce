@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuotationPreview } from "@/components/pdf/document-preview"
 import { DownloadPdfButton } from "@/components/pdf/download-pdf-button"
-import { getApiErrorMessage, toUiQuotation, useQuotation } from "@/api"
+import { getApiErrorMessage, toUiQuotation, useMoney, useQuotation } from "@/api"
 
 export default function QuotationDocumentPage({
   params,
@@ -15,6 +15,7 @@ export default function QuotationDocumentPage({
 }) {
   const { id } = use(params)
   const decoded = decodeURIComponent(id)
+  const money = useMoney()
   const { data, isLoading, error } = useQuotation(decoded)
 
   if (isLoading) {
@@ -40,7 +41,7 @@ export default function QuotationDocumentPage({
     )
   }
 
-  const quote = toUiQuotation(data)
+  const quote = toUiQuotation(data, money.currency)
 
   return (
     <div className="min-h-svh bg-zinc-950 print:bg-white">

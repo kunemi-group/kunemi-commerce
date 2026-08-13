@@ -24,6 +24,7 @@ export function QuotationDocument({
   >
 }) {
   const styles = createPdfStyles(branding.brandColor)
+  const currency = quote.currency || business.currency || "NGN"
   const totals = computeDocTotals({
     lines: quote.lines,
     statedTotal: quote.total,
@@ -31,6 +32,7 @@ export function QuotationDocument({
     taxEnabled: branding.taxEnabled,
     taxRatePercent: branding.taxRatePercent,
     taxLabel: branding.taxLabel,
+    currency,
   })
   const showTransfer = quote.paymentMethods.includes("transfer")
   const showCard = quote.paymentMethods.includes("card")
@@ -66,7 +68,7 @@ export function QuotationDocument({
             { label: "Issue date", value: quote.issueDate ?? quote.created },
             { label: "Valid until", value: quote.validUntil },
             { label: "Prepared by", value: quote.owner },
-            { label: "Currency", value: business.currency },
+            { label: "Currency", value: currency },
             {
               label: "Tax",
               value: branding.taxEnabled
@@ -76,7 +78,7 @@ export function QuotationDocument({
           ]}
         />
 
-        <PdfLineTable styles={styles} lines={quote.lines} />
+        <PdfLineTable styles={styles} lines={quote.lines} currency={currency} />
 
         <PdfTotals styles={styles} totals={totals} mode="total" />
 

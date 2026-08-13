@@ -47,8 +47,7 @@ export function currencyFractionDigits(currency: string): number {
 }
 
 /**
- * Format integer minor units in any ISO currency.
- * @deprecated Prefer formatMoney(cents, currency) — formatNgn kept for call sites.
+ * Format integer minor units (cents/kobo) in any ISO currency.
  */
 export function formatMoney(
   amountMinor: number,
@@ -70,7 +69,39 @@ export function formatMoney(
   }
 }
 
-/** @deprecated Use formatMoney(cents, business.currency) */
+/** Format major units (user-entered shipping/price fields). */
+export function formatMajor(
+  amountMajor: number,
+  currency: string = "NGN",
+  locale?: string,
+) {
+  const c = normalizeCurrency(currency)
+  const digits = currencyFractionDigits(c)
+  try {
+    return new Intl.NumberFormat(locale || undefined, {
+      style: "currency",
+      currency: c,
+      maximumFractionDigits: digits,
+      minimumFractionDigits: 0,
+    }).format(amountMajor)
+  } catch {
+    return `${c} ${amountMajor.toFixed(digits)}`
+  }
+}
+
+/** Convert major → minor for API payloads */
+export function majorToMinor(amountMajor: number, currency: string = "NGN") {
+  const d = currencyFractionDigits(currency)
+  return Math.round(amountMajor * Math.pow(10, d))
+}
+
+/** Convert minor → major for form fields */
+export function minorToMajor(amountMinor: number, currency: string = "NGN") {
+  const d = currencyFractionDigits(currency)
+  return amountMinor / Math.pow(10, d)
+}
+
+/** @deprecated Use formatMoney(cents, currency) or useMoney().format */
 export function formatNgn(cents: number) {
   return formatMoney(cents, "NGN")
 }

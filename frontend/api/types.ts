@@ -113,7 +113,14 @@ export type ApiDelivery = {
   }>
 }
 
-export type UserRole = "owner" | "manager" | "sales" | "ops"
+export type UserRole =
+  | "owner"
+  | "manager"
+  | "sales"
+  | "ops"
+  | "user"
+  | "admin"
+  | "super_admin"
 
 export type ApiTeamMember = {
   id: string
@@ -330,7 +337,6 @@ export type AuthMeResponse = {
 }
 
 export type TokenResponse = {
-  accessToken: string
   user: AuthUser
 }
 
@@ -388,6 +394,7 @@ export type PublicTrackResponse = {
   externalCourierName: string | null
   businessName: string
   businessWhatsapp: string | null
+  currency?: string
   orderId: string
   customerName: string | null
   deliveryAddress: string | null

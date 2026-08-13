@@ -13,16 +13,17 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import type { Kpi } from "@/lib/data"
-import { flattenInventory, useProducts } from "@/api"
+import { flattenInventory, useMoney, useProducts } from "@/api"
 
 export default function InventoryPage() {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: products = [] } = useProducts(isAuthenticated)
   const [formMode, setFormMode] = useState<ProductFormMode | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
   const kpis = useMemo((): Kpi[] => {
-    const rows = flattenInventory(products)
+    const rows = flattenInventory(products, money.currency)
     const skus = rows.length
     const low = rows.filter((r) => r.onHand - r.reserved <= r.threshold).length
     const reserved = rows.reduce((s, r) => s + r.reserved, 0)

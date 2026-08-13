@@ -15,7 +15,10 @@ import {
   getApiErrorMessage,
   uploadFile,
   useAddVariant,
+  majorToMinor,
+  minorToMajor,
   useCreateProduct,
+  useMoney,
   useUpdateProduct,
   useUpdateVariant,
   type ApiProduct,
@@ -40,6 +43,7 @@ export function ProductFormSheet({
   onOpenChange: (open: boolean) => void
   mode: ProductFormMode | null
 }) {
+  const money = useMoney()
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
   const addVariant = useAddVariant()
@@ -49,7 +53,7 @@ export function ProductFormSheet({
   const [description, setDescription] = useState("")
   const [sku, setSku] = useState("")
   const [variantLabel, setVariantLabel] = useState("Default")
-  const [priceNaira, setPriceNaira] = useState("")
+  const [priceMajor, setPriceMajor] = useState("")
   const [stock, setStock] = useState("0")
   const [threshold, setThreshold] = useState("5")
   const [taxExempt, setTaxExempt] = useState(false)
@@ -68,7 +72,7 @@ export function ProductFormSheet({
       setDescription("")
       setSku("")
       setVariantLabel("Default")
-      setPriceNaira("")
+      setPriceMajor("")
       setStock("0")
       setThreshold("5")
       setTaxExempt(false)
@@ -84,7 +88,7 @@ export function ProductFormSheet({
     } else if (mode.type === "add-variant") {
       setSku("")
       setVariantLabel("")
-      setPriceNaira("")
+      setPriceMajor("")
       setStock("0")
       setThreshold("5")
       setTaxExempt(false)
@@ -96,13 +100,16 @@ export function ProductFormSheet({
       setVariantLabel(
         v.attributes ? Object.values(v.attributes).join(" / ") || "Default" : "Default",
       )
-      setPriceNaira(String(Math.round(v.priceCents / 100)))
+      const major = minorToMajor(v.priceCents, money.currency)
+      setPriceMajor(
+        Number.isInteger(major) ? String(major) : String(Number(major.toFixed(4))),
+      )
       setThreshold(String(v.lowStockThreshold ?? 5))
       setTaxExempt(!!v.taxExempt)
       setImageKey(v.imageKey ?? null)
       setImageUrl(v.imageUrl ?? null)
     }
-  }, [open, mode])
+  }, [open, mode, money.currency])
 
   const busy =
     createProduct.isPending ||
@@ -154,7 +161,7 @@ export function ProductFormSheet({
           setError("Product name is required")
           return
         }
-        const price = Math.round((Number(priceNaira) || 0) * 100)
+        const price = majorToMinor(Number(priceMajor) || 0, money.currency)
         if (price <= 0) {
           setError("Enter a unit price greater than 0")
           return
@@ -190,7 +197,7 @@ export function ProductFormSheet({
           },
         })
       } else if (mode.type === "add-variant") {
-        const price = Math.round((Number(priceNaira) || 0) * 100)
+        const price = majorToMinor(Number(priceMajor) || 0, money.currency)
         if (price <= 0) {
           setError("Enter a unit price greater than 0")
           return
@@ -210,7 +217,7 @@ export function ProductFormSheet({
           },
         })
       } else if (mode.type === "edit-variant") {
-        const price = Math.round((Number(priceNaira) || 0) * 100)
+        const price = majorToMinor(Number(priceMajor) || 0, money.currency)
         if (price <= 0) {
           setError("Enter a unit price greater than 0")
           return
@@ -322,9 +329,9 @@ export function ProductFormSheet({
               )}
               <Field label="SKU (optional)" value={sku} onChange={setSku} placeholder="SKU-001" />
               <Field
-                label="Unit price (₦)"
-                value={priceNaira}
-                onChange={setPriceNaira}
+                label={money.label("Unit price")}
+                value={priceMajor}
+                onChange={setPriceMajor}
                 placeholder="15000"
                 type="number"
               />

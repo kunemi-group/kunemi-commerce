@@ -34,7 +34,7 @@ import { EmptyState } from "./empty-state"
 import type { OrderStatus } from "@/lib/data"
 import { useAuth } from "@/lib/auth-context"
 import {
-  formatNgn,
+  useMoney,
   minutesLeft,
   relativeTime,
   shortId,
@@ -58,6 +58,7 @@ const filters: { key: FilterKey; label: string }[] = [
 
 export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const [active, setActive] = useState<FilterKey>("all")
   const [query, setQuery] = useState("")
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -230,7 +231,7 @@ export function OrdersTable({ refreshKey = 0 }: { refreshKey?: number }) {
                           </span>
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
-                          {formatNgn(order.totalCents)}
+                          {money.format(order.totalCents)}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={order.status} />

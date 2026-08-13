@@ -23,6 +23,7 @@ import { useBranding } from "@/lib/branding-context"
 import { brandInitials, fileToDataUrl } from "@/lib/branding"
 import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
+import { majorToMinor, minorToMajor } from "@/api"
 
 const PRESET_COLORS = [
   "#4f6bed",
@@ -50,7 +51,7 @@ export function SettingsPanel() {
   const [taxEnabled, setTaxEnabled] = useState(true)
   const [taxLabel, setTaxLabel] = useState("VAT")
   const [taxRate, setTaxRate] = useState(7.5)
-  const [shippingNaira, setShippingNaira] = useState(2500)
+  const [shippingMajor, setShippingMajor] = useState(2500)
   const [brandColor, setBrandColor] = useState("#4f6bed")
   const [storeSlug, setStoreSlug] = useState("")
   const [storeEnabled, setStoreEnabled] = useState(true)
@@ -75,25 +76,30 @@ export function SettingsPanel() {
     setTaxEnabled(business.tax.enabled)
     setTaxLabel(business.tax.label ?? "VAT")
     setTaxRate(Number(business.tax.ratePercent) || 0)
-    setShippingNaira(Math.round((business.shipping.defaultFeeCents ?? 0) / 100))
+    {
+      const cur = business.currency ?? "NGN"
+      const shipMajor = minorToMajor(
+        business.shipping.defaultFeeCents ?? 0,
+        cur,
+      )
+      setShippingMajor(shipMajor)
+      setCurrency(cur)
+      // Sync local branding defaults from server
+      branding.setBranding({
+        brandColor: business.brandColor || branding.brandColor,
+        taxEnabled: business.tax.enabled,
+        taxLabel: business.tax.label,
+        taxRatePercent: Number(business.tax.ratePercent) || 0,
+        defaultShippingFeeNaira: shipMajor,
+        logoDataUrl: business.logoUrl ?? branding.logoDataUrl,
+      })
+    }
     setBrandColor(business.brandColor || branding.brandColor || "#4f6bed")
     setStoreSlug(business.store?.slug ?? "")
     setStoreEnabled(business.store?.enabled ?? true)
-    setCurrency(business.currency ?? "NGN")
     setDefaultPaymentMethod(business.payments?.defaultMethod ?? "bank_transfer")
     setLogoKey(business.logoKey ?? null)
     setLogoUrl(business.logoUrl ?? null)
-    // Sync local branding defaults from server
-    branding.setBranding({
-      brandColor: business.brandColor || branding.brandColor,
-      taxEnabled: business.tax.enabled,
-      taxLabel: business.tax.label,
-      taxRatePercent: Number(business.tax.ratePercent) || 0,
-      defaultShippingFeeNaira: Math.round(
-        (business.shipping.defaultFeeCents ?? 0) / 100,
-      ),
-      logoDataUrl: business.logoUrl ?? branding.logoDataUrl,
-    })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per business load
   }, [business?.id, business?.name, business?.bank.accountNumber, business?.store?.slug])
 
@@ -145,7 +151,7 @@ export function SettingsPanel() {
         taxEnabled,
         taxLabel: taxLabel.trim() || "VAT",
         taxRatePercent: taxRate,
-        defaultShippingFeeCents: Math.round(shippingNaira * 100),
+        defaultShippingFeeCents: majorToMinor(shippingMajor, currency),
         brandColor,
       })
       branding.setBranding({
@@ -153,7 +159,7 @@ export function SettingsPanel() {
         taxEnabled,
         taxLabel: taxLabel.trim() || "VAT",
         taxRatePercent: taxRate,
-        defaultShippingFeeNaira: shippingNaira,
+        defaultShippingFeeNaira: shippingMajor,
       })
       await refresh()
       setMessage("Tax, shipping, and brand color saved")
@@ -569,14 +575,14 @@ export function SettingsPanel() {
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                    Default shipping (₦)
+                    {`Default shipping (${currency})`}
                     <input
                       type="number"
                       min={0}
                       step={100}
-                      value={shippingNaira}
+                      value={shippingMajor}
                       onChange={(e) =>
-                        setShippingNaira(Math.max(0, Number(e.target.value) || 0))
+                        setShippingMajor(Math.max(0, Number(e.target.value) || 0))
                       }
                       className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm tabular-nums text-foreground"
                     />
@@ -683,11 +689,13 @@ function Field({
   value,
   onChange,
   disabled,
+  placeholder,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   disabled?: boolean
+  placeholder?: string
 }) {
   return (
     <label className="flex flex-col gap-1.5">
@@ -696,6 +704,7 @@ function Field({
         type="text"
         value={value}
         disabled={disabled}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
       />

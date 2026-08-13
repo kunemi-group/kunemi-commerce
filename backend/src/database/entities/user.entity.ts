@@ -10,8 +10,19 @@ import {
 import { dateTimeType } from '../column-types';
 import { Business } from './business.entity';
 
-/** Staff use Workspace; buyers use ShopFlow only (no businessId). */
-export type UserRole = 'owner' | 'manager' | 'sales' | 'ops' | 'buyer';
+/** 
+ * Business Staff: 'owner' | 'manager' | 'sales' | 'ops' (requires businessId)
+ * End User / Buyer: 'user' (no businessId)
+ * Platform Admin: 'admin' | 'super_admin' (no businessId)
+ */
+export type UserRole =
+  | 'owner'
+  | 'manager'
+  | 'sales'
+  | 'ops'
+  | 'user'
+  | 'admin'
+  | 'super_admin';
 
 @Entity('users')
 @Unique(['businessId', 'email'])
@@ -19,7 +30,7 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  /** Null for ShopFlow buyers; required for Workspace staff */
+  /** Null for end users; required for Workspace staff */
   @Column({ name: 'business_id', type: 'uuid', nullable: true })
   businessId!: string | null;
 
@@ -42,6 +53,21 @@ export class User {
 
   @Column({ type: 'text' })
   role!: UserRole;
+
+  @Column({ name: 'is_email_verified', type: 'boolean', default: false })
+  isEmailVerified!: boolean;
+
+  @Column({ name: 'email_verification_otp', type: 'text', nullable: true })
+  emailVerificationOtp!: string | null;
+
+  @Column({ name: 'email_verification_expires_at', type: dateTimeType(), nullable: true })
+  emailVerificationExpiresAt!: Date | null;
+
+  @Column({ name: 'refresh_token_hash', type: 'text', nullable: true })
+  refreshTokenHash!: string | null;
+
+  @Column({ name: 'refresh_token_expires_at', type: dateTimeType(), nullable: true })
+  refreshTokenExpiresAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;

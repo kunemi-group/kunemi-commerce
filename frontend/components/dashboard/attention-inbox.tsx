@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import {
   flattenInventory,
-  formatNgn,
   minutesLeft,
   shortId,
   useDeliveries,
+  useMoney,
   useOrders,
   usePayments,
   useProducts,
@@ -65,6 +65,7 @@ export function AttentionInbox({
   limit?: number
 }) {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: orders = [], isLoading: oLoad } = useOrders(isAuthenticated)
   const { data: payments = [], isLoading: pLoad } = usePayments(isAuthenticated)
   const { data: products = [], isLoading: prLoad } = useProducts(isAuthenticated)
@@ -84,7 +85,7 @@ export function AttentionInbox({
         detail: "Manual proofs waiting — confirm to mark orders paid",
         href: "/payments",
         urgency: "high",
-        meta: formatNgn(total),
+        meta: money.format(total),
       })
     }
 
@@ -146,7 +147,7 @@ export function AttentionInbox({
     }
 
     return list
-  }, [orders, payments, products, deliveries])
+  }, [orders, payments, products, deliveries, money])
 
   const shown = limit ? items.slice(0, limit) : items
   const high = items.filter((i) => i.urgency === "high").length

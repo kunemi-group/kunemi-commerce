@@ -10,10 +10,11 @@ import { CreateDocumentDrawer } from "@/components/dashboard/create-document-dra
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import type { Kpi } from "@/lib/data"
-import { formatNgn, useInvoices } from "@/api"
+import { useInvoices, useMoney } from "@/api"
 
 export default function InvoicesPage() {
   const { isAuthenticated } = useAuth()
+  const money = useMoney()
   const { data: invoices = [] } = useInvoices(isAuthenticated)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -30,7 +31,7 @@ export default function InvoicesPage() {
       {
         id: "out",
         label: "Outstanding",
-        value: formatNgn(outstanding),
+        value: money.format(outstanding),
         delta: "open",
         trend: outstanding > 0 ? "up" : "down",
         helper: "sent + partial + overdue balance",
@@ -38,7 +39,7 @@ export default function InvoicesPage() {
       {
         id: "paid",
         label: "Collected",
-        value: formatNgn(collected),
+        value: money.format(collected),
         delta: "paid",
         trend: "up",
         helper: "amount marked paid",
@@ -60,7 +61,7 @@ export default function InvoicesPage() {
         helper: "fully paid",
       },
     ]
-  }, [invoices])
+  }, [invoices, money])
 
   return (
     <DashboardShell

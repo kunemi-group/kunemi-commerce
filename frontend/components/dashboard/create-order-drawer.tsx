@@ -23,10 +23,12 @@ import { formatMoney, parseMoney } from "@/lib/pdf/money"
 import type { QuoteLine } from "@/lib/data"
 import {
   flattenInventory,
-  formatNgn,
   getApiErrorMessage,
+  majorToMinor,
+  minorToMajor,
   shortId,
   useCreateOrder,
+  useMoney,
   useProducts,
 } from "@/api"
 
@@ -60,9 +62,13 @@ export function CreateOrderDrawer({
 }) {
   const branding = useBranding()
   const { isAuthenticated, business } = useAuth()
+  const money = useMoney()
   const { data: products = [] } = useProducts(open && isAuthenticated)
   const createOrder = useCreateOrder()
-  const inventory = useMemo(() => flattenInventory(products), [products])
+  const inventory = useMemo(
+    () => flattenInventory(products, money.currency),
+    [products, money.currency],
+  )
   const hasCatalog = inventory.length > 0
   const [step, setStep] = useState<Step>(1)
   const [customer, setCustomer] = useState(presetCustomer ?? "")
@@ -72,7 +78,7 @@ export function CreateOrderDrawer({
   const [shippingFee, setShippingFee] = useState(
     String(
       business
-        ? Math.round(business.shipping.defaultFeeCents / 100)
+        ? minorToMajor(business.shipping.defaultFeeCents, money.currency)
         : branding.defaultShippingFeeNaira,
     ),
   )
@@ -111,12 +117,19 @@ export function CreateOrderDrawer({
     if (open) {
       if (presetCustomer) setCustomer(presetCustomer)
       if (presetPhone) setPhone(presetPhone)
-      const shipNaira = business
-        ? Math.round(business.shipping.defaultFeeCents / 100)
+      const shipMajor = business
+        ? minorToMajor(business.shipping.defaultFeeCents, money.currency)
         : branding.defaultShippingFeeNaira
-      setShippingFee(String(shipNaira))
+      setShippingFee(String(shipMajor))
     }
-  }, [open, presetCustomer, presetPhone, branding.defaultShippingFeeNaira, business])
+  }, [
+    open,
+    presetCustomer,
+    presetPhone,
+    branding.defaultShippingFeeNaira,
+    business,
+    money.currency,
+  ])
 
   const catalogLines: QuoteLine[] = useMemo(() => {
     return inventory
@@ -135,12 +148,15 @@ export function CreateOrderDrawer({
       .map((l) => ({
         name: l.name.trim(),
         qty: l.qty,
-        unitPrice: l.unitPrice.includes("₦")
+        unitPrice: /[A-Za-z$€£₦]/.test(l.unitPrice)
           ? l.unitPrice
-          : formatMoney(parseMoney(l.unitPrice) || Number(l.unitPrice) || 0),
+          : formatMoney(
+              parseMoney(l.unitPrice) || Number(l.unitPrice) || 0,
+              money.currency,
+            ),
         taxExempt: l.taxExempt,
       }))
-  }, [customLines])
+  }, [customLines, money.currency])
 
   const lines: QuoteLine[] =
     lineSource === "catalog" ? catalogLines : freeformLines
@@ -153,8 +169,9 @@ export function CreateOrderDrawer({
         taxEnabled: branding.taxEnabled,
         taxRatePercent: branding.taxRatePercent,
         taxLabel: branding.taxLabel,
+        currency: money.currency,
       }),
-    [lines, shippingFee, branding],
+    [lines, shippingFee, branding, money.currency],
   )
 
   const totalUnits = lines.reduce((s, l) => s + l.qty, 0)
@@ -178,10 +195,10 @@ export function CreateOrderDrawer({
     if (!presetPhone) setPhone("")
     setEmail("")
     setAddress("")
-    const shipNaira = business
-      ? Math.round(business.shipping.defaultFeeCents / 100)
+    const shipMajor = business
+      ? minorToMajor(business.shipping.defaultFeeCents, money.currency)
       : branding.defaultShippingFeeNaira
-    setShippingFee(String(shipNaira))
+    setShippingFee(String(shipMajor))
     setCustomLines([{ id: "c1", name: "", qty: 1, unitPrice: "", taxExempt: false }])
     setLineSource(hasCatalog ? "catalog" : "custom")
   }
@@ -221,8 +238,9 @@ export function CreateOrderDrawer({
               .map((l) => ({
                 description: l.name.trim(),
                 quantity: l.qty,
-                unitPriceCents: Math.round(
-                  (parseMoney(l.unitPrice) || Number(l.unitPrice) || 0) * 100,
+                unitPriceCents: majorToMinor(
+                  parseMoney(l.unitPrice) || Number(l.unitPrice) || 0,
+                  money.currency,
                 ),
                 taxExempt: l.taxExempt,
               }))
@@ -232,8 +250,9 @@ export function CreateOrderDrawer({
         return
       }
 
-      const shipCents = Math.round(
-        (parseMoney(shippingFee) || Number(shippingFee) || 0) * 100,
+      const shipCents = majorToMinor(
+        parseMoney(shippingFee) || Number(shippingFee) || 0,
+        money.currency,
       )
 
       const created = await createOrder.mutateAsync({
@@ -246,7 +265,7 @@ export function CreateOrderDrawer({
       })
 
       setCreatedId(shortId(created.id))
-      setCreatedTotal(formatNgn(created.totalCents))
+      setCreatedTotal(money.format(created.totalCents))
       setPaymentLink(created.paymentLink || created.payment?.paymentUrl || "")
       setStep(3)
       onCreated?.()
@@ -308,7 +327,7 @@ export function CreateOrderDrawer({
               />
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
-                  Shipping fee (₦)
+                  {money.label("Shipping fee")}
                 </span>
                 <input
                   type="number"
@@ -319,7 +338,9 @@ export function CreateOrderDrawer({
                   className="h-9 rounded-md border border-input bg-background px-3 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <span className="text-[11px] text-muted-foreground">
-                  Never taxed. Default {formatMoney(branding.defaultShippingFeeNaira)}. 0 = pickup.
+                  Never taxed. Default{" "}
+                  {money.formatMajor(branding.defaultShippingFeeNaira)}. 0 =
+                  pickup.
                 </span>
               </label>
               <div className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm">
@@ -500,7 +521,7 @@ export function CreateOrderDrawer({
                           />
                         </label>
                         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                          Unit price (₦)
+                          {money.label("Unit price")}
                           <input
                             type="number"
                             min={0}
