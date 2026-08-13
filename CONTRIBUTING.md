@@ -40,3 +40,10 @@ pnpm build
 
 The repository-level Husky hook runs lint-staged and formats staged supported
 files before commit. CI remains the authoritative full-project gate.
+
+## Approved dependency builds
+
+pnpm permits only the native dependency build scripts required by each app:
+`bcrypt`, `better-sqlite3`, and `unrs-resolver` for the backend, and
+`unrs-resolver` for the frontend. Keep this allowlist narrow and review any
+new package before approving its build script.

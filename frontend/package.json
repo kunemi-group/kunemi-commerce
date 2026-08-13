@@ -53,6 +53,9 @@
     "vitest": "^4.1.10"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "unrs-resolver"
+    ],
     "overrides": {
       "hono": "4.12.25"
     }
