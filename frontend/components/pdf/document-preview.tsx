@@ -1,6 +1,11 @@
 "use client"
 
-import { business, type Invoice, type Quotation, type QuoteLine } from "@/lib/data"
+import {
+  business,
+  type Invoice,
+  type Quotation,
+  type QuoteLine,
+} from "@/lib/data"
 import { brandInitials, brandSoft } from "@/lib/branding"
 import { useBranding } from "@/lib/branding-context"
 import { formatMoney, lineTotal } from "@/lib/pdf/money"
@@ -68,7 +73,8 @@ export function QuotationPreview({ quote }: { quote: Quotation }) {
       />
       {quote.notes ? <Notes text={quote.notes} /> : null}
       <p className="mt-8 text-xs italic text-slate-500">
-        Thank you for considering {business.name}. This quotation is not a tax invoice.
+        Thank you for considering {business.name}. This quotation is not a tax
+        invoice.
       </p>
       <Footer id={quote.id} />
     </DocumentShell>
@@ -110,8 +116,12 @@ export function InvoicePreview({ invoice }: { invoice: Invoice }) {
         items={[
           { label: "Issue date", value: invoice.issueDate ?? invoice.created },
           { label: "Due date", value: invoice.dueDate },
-          ...(invoice.orderId ? [{ label: "Order", value: invoice.orderId }] : []),
-          ...(invoice.quoteId ? [{ label: "Quote ref", value: invoice.quoteId }] : []),
+          ...(invoice.orderId
+            ? [{ label: "Order", value: invoice.orderId }]
+            : []),
+          ...(invoice.quoteId
+            ? [{ label: "Quote ref", value: invoice.quoteId }]
+            : []),
           { label: "Prepared by", value: invoice.owner },
           { label: "Currency", value: currency },
           {
@@ -188,7 +198,6 @@ function DocHeader({
     <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div className="flex items-center gap-3">
         {logoDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoDataUrl}
             alt={`${business.name} logo`}
@@ -261,7 +270,9 @@ function Parties({
           {billLabel}
         </p>
         <p className="mt-1 font-semibold">{customer}</p>
-        {address ? <p className="mt-1 text-xs text-slate-500">{address}</p> : null}
+        {address ? (
+          <p className="mt-1 text-xs text-slate-500">{address}</p>
+        ) : null}
         {email ? <p className="text-xs text-slate-500">{email}</p> : null}
         {phone ? <p className="text-xs text-slate-500">{phone}</p> : null}
       </div>
@@ -277,7 +288,9 @@ function Meta({ items }: { items: { label: string; value: string }[] }) {
           key={item.label}
           className="min-w-[7rem] rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
         >
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">{item.label}</p>
+          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+            {item.label}
+          </p>
           <p className="text-sm font-semibold">{item.value}</p>
         </div>
       ))}
@@ -324,7 +337,9 @@ function LineTable({
                     </span>
                   ) : null}
                 </td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{line.qty}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">
+                  {line.qty}
+                </td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                   {line.unitPrice}
                 </td>
@@ -337,12 +352,9 @@ function LineTable({
         </tbody>
         <tfoot>
           <tr style={{ backgroundColor: brandSoft(brandColor, 0.08) }}>
-            <td
-              colSpan={4}
-              className="px-3 py-2 text-[10px] text-slate-500"
-            >
-              {lines.length} line item{lines.length === 1 ? "" : "s"} · long lists
-              paginate in the PDF download
+            <td colSpan={4} className="px-3 py-2 text-[10px] text-slate-500">
+              {lines.length} line item{lines.length === 1 ? "" : "s"} · long
+              lists paginate in the PDF download
             </td>
           </tr>
         </tfoot>
@@ -446,14 +458,18 @@ function PaymentBlock({
         {showTransfer ? (
           <div className="space-y-1">
             <p>
-              <span className="font-semibold">Bank transfer:</span> {bank.bankName}
+              <span className="font-semibold">Bank transfer:</span>{" "}
+              {bank.bankName}
             </p>
             <p>
-              Account name: <span className="font-medium">{bank.accountName}</span>
+              Account name:{" "}
+              <span className="font-medium">{bank.accountName}</span>
             </p>
             <p>
               Account number:{" "}
-              <span className="font-medium tabular-nums">{bank.accountNumber}</span>
+              <span className="font-medium tabular-nums">
+                {bank.accountNumber}
+              </span>
             </p>
             <p className="text-xs text-slate-500">
               Use reference {reference}. Upload proof of payment after transfer.
@@ -462,8 +478,8 @@ function PaymentBlock({
         ) : null}
         {showCard ? (
           <p className={showTransfer ? "mt-3" : undefined}>
-            <span className="font-semibold">Card:</span> Request a secure payment link
-            from {business.name}.
+            <span className="font-semibold">Card:</span> Request a secure
+            payment link from {business.name}.
           </p>
         ) : null}
       </div>

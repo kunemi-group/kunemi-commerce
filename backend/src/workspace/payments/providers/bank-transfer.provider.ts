@@ -14,7 +14,7 @@ export class BankTransferProvider implements PaymentProvider {
   readonly id = 'bank_transfer' as const;
   readonly label = 'Bank transfer';
 
-  isAvailable(business: Business): boolean {
+  isAvailable(_business: Business): boolean {
     // Available even if bank incomplete — onboarding should push them to fill details
     return true;
   }

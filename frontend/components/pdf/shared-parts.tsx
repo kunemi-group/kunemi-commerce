@@ -10,7 +10,7 @@ export const PDF_TABLE_CHUNK = 18
 
 export function PdfBrandHeader({
   styles,
-  brandColor,
+  brandColor: _brandColor,
   logoDataUrl,
   title,
   docId,
@@ -28,7 +28,6 @@ export function PdfBrandHeader({
       <View style={styles.headerRow} wrap={false}>
         <View style={styles.brandBlock}>
           {logoDataUrl ? (
-            // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image
             <Image src={logoDataUrl} style={styles.logoImage} />
           ) : (
             <View style={styles.logoMark}>
@@ -162,7 +161,9 @@ export function PdfLineTable({
                   {line.taxExempt ? "  · Tax-free" : ""}
                 </Text>
                 <Text style={[styles.cell, styles.colQty]}>{line.qty}</Text>
-                <Text style={[styles.cellMuted, styles.colPrice]}>{line.unitPrice}</Text>
+                <Text style={[styles.cellMuted, styles.colPrice]}>
+                  {line.unitPrice}
+                </Text>
                 <Text style={[styles.cell, styles.colTotal]}>
                   {amount ? formatMoney(amount, currency) : "—"}
                 </Text>
@@ -263,17 +264,23 @@ export function PdfPaymentBox({
               <Text style={styles.paymentStrong}>Bank transfer: </Text>
               {bank.bankName}
             </Text>
-            <Text style={styles.paymentLine}>Account name: {bank.accountName}</Text>
+            <Text style={styles.paymentLine}>
+              Account name: {bank.accountName}
+            </Text>
             <Text style={styles.paymentLine}>
               Account number: {bank.accountNumber}
             </Text>
-            <Text style={[styles.paymentLine, { color: "#64748b", marginTop: 3 }]}>
+            <Text
+              style={[styles.paymentLine, { color: "#64748b", marginTop: 3 }]}
+            >
               Reference {reference}. Upload proof of payment after transfer.
             </Text>
           </>
         ) : null}
         {showCard ? (
-          <Text style={[styles.paymentLine, { marginTop: showTransfer ? 5 : 0 }]}>
+          <Text
+            style={[styles.paymentLine, { marginTop: showTransfer ? 5 : 0 }]}
+          >
             <Text style={styles.paymentStrong}>Card: </Text>
             Request a secure payment link from {business.name}.
           </Text>
@@ -283,7 +290,13 @@ export function PdfPaymentBox({
   )
 }
 
-export function PdfFooter({ styles, docId }: { styles: PdfStyles; docId: string }) {
+export function PdfFooter({
+  styles,
+  docId,
+}: {
+  styles: PdfStyles
+  docId: string
+}) {
   return (
     <View style={styles.footer} fixed>
       <Text style={styles.footerText}>
@@ -291,7 +304,9 @@ export function PdfFooter({ styles, docId }: { styles: PdfStyles; docId: string 
       </Text>
       <Text
         style={styles.footerText}
-        render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+        render={({ pageNumber, totalPages }) =>
+          `Page ${pageNumber} of ${totalPages}`
+        }
       />
     </View>
   )

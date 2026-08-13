@@ -3,8 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Delivery } from '../../../database/entities/delivery.entity';
-import { DeliveryStatusEvent } from '../../../database/entities/delivery-status-event.entity';
-import { Order } from '../../../database/entities/order.entity';
 import { OrderItem } from '../../../database/entities/order-item.entity';
 import { Business } from '../../../database/entities/business.entity';
 
@@ -132,9 +130,11 @@ export class TrackingService {
         createdAt: e.createdAt,
       }));
       if (order) {
-        const itemEntities = await this.dataSource.getRepository(OrderItem).find({
-          where: { orderId: delivery.orderId },
-        });
+        const itemEntities = await this.dataSource
+          .getRepository(OrderItem)
+          .find({
+            where: { orderId: delivery.orderId },
+          });
         items = itemEntities.map((i) => ({
           description: i.description,
           quantity: i.quantity,
@@ -145,7 +145,11 @@ export class TrackingService {
         where: { id: delivery.businessId },
       });
       business = biz
-        ? { name: biz.name, whatsappNumber: biz.whatsappNumber, currency: biz.currency }
+        ? {
+            name: biz.name,
+            whatsappNumber: biz.whatsappNumber,
+            currency: biz.currency,
+          }
         : null;
     }
 
@@ -218,19 +222,14 @@ export class TrackingService {
       fulfillmentMode: String(
         this.col(row, 'fulfillmentMode', 'fulfillment_mode'),
       ),
-      provider: (this.col(row, 'provider', 'provider') as string | null) ?? null,
+      provider:
+        (this.col(row, 'provider', 'provider') as string | null) ?? null,
       externalTrackingUrl:
-        (this.col(
-          row,
-          'externalTrackingUrl',
-          'external_tracking_url',
-        ) as string | null) ?? null,
+        (this.col(row, 'externalTrackingUrl', 'external_tracking_url') as
+          string | null) ?? null,
       externalCourierName:
-        (this.col(
-          row,
-          'externalCourierName',
-          'external_courier_name',
-        ) as string | null) ?? null,
+        (this.col(row, 'externalCourierName', 'external_courier_name') as
+          string | null) ?? null,
     };
   }
 
@@ -240,11 +239,8 @@ export class TrackingService {
         (this.col(row, 'customerName', 'customer_name') as string | null) ??
         null,
       deliveryAddress:
-        (this.col(
-          row,
-          'deliveryAddress',
-          'delivery_address',
-        ) as string | null) ?? null,
+        (this.col(row, 'deliveryAddress', 'delivery_address') as
+          string | null) ?? null,
     };
   }
 
@@ -272,11 +268,8 @@ export class TrackingService {
     return {
       name: String(this.col(row, 'name', 'name') ?? 'Shop'),
       whatsappNumber:
-        (this.col(
-          row,
-          'whatsappNumber',
-          'whatsapp_number',
-        ) as string | null) ?? null,
+        (this.col(row, 'whatsappNumber', 'whatsapp_number') as string | null) ??
+        null,
       currency: String(this.col(row, 'currency', 'currency') ?? 'NGN'),
     };
   }

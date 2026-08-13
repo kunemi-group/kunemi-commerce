@@ -15,7 +15,13 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { tierLimits, type SubscriptionTier } from "@/lib/data"
@@ -100,8 +106,12 @@ export function SettingsPanel() {
     setDefaultPaymentMethod(business.payments?.defaultMethod ?? "bank_transfer")
     setLogoKey(business.logoKey ?? null)
     setLogoUrl(business.logoUrl ?? null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per business load
-  }, [business?.id, business?.name, business?.bank.accountNumber, business?.store?.slug])
+  }, [
+    business?.id,
+    business?.name,
+    business?.bank.accountNumber,
+    business?.store?.slug,
+  ])
 
   async function saveProfile() {
     setSaving("profile")
@@ -269,26 +279,48 @@ export function SettingsPanel() {
                 Business profile
               </CardTitle>
               <CardDescription>
-                Shown on tracking pages, invoices, and customer WhatsApp messages
+                Shown on tracking pages, invoices, and customer WhatsApp
+                messages
               </CardDescription>
             </div>
-            <Button size="sm" className="gap-2" disabled={!!saving} onClick={() => void saveProfile()}>
-              {saving === "profile" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!!saving}
+              onClick={() => void saveProfile()}
+            >
+              {saving === "profile" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
               Save changes
             </Button>
           </CardHeader>
           <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
             <Field label="Business name" value={name} onChange={setName} />
             <Field label="Support email" value={email} onChange={setEmail} />
-            <Field label="WhatsApp business number" value={whatsapp} onChange={setWhatsapp} />
+            <Field
+              label="WhatsApp business number"
+              value={whatsapp}
+              onChange={setWhatsapp}
+            />
             <div className="sm:col-span-2">
-              <Field label="Pickup / storefront address" value={address} onChange={setAddress} />
+              <Field
+                label="Pickup / storefront address"
+                value={address}
+                onChange={setAddress}
+              />
             </div>
             <div className="sm:col-span-2">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Sales channels</p>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Sales channels
+              </p>
               <div className="flex flex-wrap gap-2">
                 {["WhatsApp", "Instagram"].map((ch) => (
-                  <Badge key={ch} variant="secondary" className="gap-1.5 px-2.5 py-1">
+                  <Badge
+                    key={ch}
+                    variant="secondary"
+                    className="gap-1.5 px-2.5 py-1"
+                  >
                     <MessageCircle className="size-3.5" />
                     {ch}
                   </Badge>
@@ -306,7 +338,8 @@ export function SettingsPanel() {
                 Currency & payments
               </CardTitle>
               <CardDescription>
-                Global business currency (ISO). Default payment is bank transfer; Stripe/Paystack can plug in later.
+                Global business currency (ISO). Default payment is bank
+                transfer; Stripe/Paystack can plug in later.
               </CardDescription>
             </div>
             <Button
@@ -384,11 +417,19 @@ export function SettingsPanel() {
                 ShopFlow storefront
               </CardTitle>
               <CardDescription>
-                Public catalog API for ShopFlow social store — Workspace is the backend of record
+                Public catalog API for ShopFlow social store — Workspace is the
+                backend of record
               </CardDescription>
             </div>
-            <Button size="sm" className="gap-2" disabled={!!saving} onClick={() => void saveStore()}>
-              {saving === "store" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!!saving}
+              onClick={() => void saveStore()}
+            >
+              {saving === "store" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
               Save store
             </Button>
           </CardHeader>
@@ -409,7 +450,9 @@ export function SettingsPanel() {
               Store enabled
             </label>
             <div className="sm:col-span-2 rounded-lg border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">Public endpoints for ShopFlow</p>
+              <p className="font-medium text-foreground">
+                Public endpoints for ShopFlow
+              </p>
               <p className="mt-1 font-mono">
                 GET /api/store/{storeSlug || "{slug}"}
               </p>
@@ -417,7 +460,8 @@ export function SettingsPanel() {
                 GET /api/store/{storeSlug || "{slug}"}/products
               </p>
               <p className="mt-2">
-                Products with “Publish to ShopFlow store” appear here. Images use R2 when configured.
+                Products with “Publish to ShopFlow store” appear here. Images
+                use R2 when configured.
               </p>
             </div>
           </CardContent>
@@ -431,7 +475,8 @@ export function SettingsPanel() {
                 Document branding & tax
               </CardTitle>
               <CardDescription>
-                Brand color, VAT, and default shipping (saved to business record)
+                Brand color, VAT, and default shipping (saved to business
+                record)
               </CardDescription>
             </div>
             <Button
@@ -440,7 +485,9 @@ export function SettingsPanel() {
               disabled={!!saving}
               onClick={() => void saveTaxShippingBrand()}
             >
-              {saving === "tax" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {saving === "tax" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
               Save
             </Button>
           </CardHeader>
@@ -451,7 +498,6 @@ export function SettingsPanel() {
               </p>
               <div className="flex items-center gap-3">
                 {logoUrl || branding.logoDataUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={logoUrl || branding.logoDataUrl || ""}
                     alt="Business logo"
@@ -471,7 +517,9 @@ export function SettingsPanel() {
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="hidden"
-                    onChange={(e) => void onLogoSelected(e.target.files?.[0] ?? null)}
+                    onChange={(e) =>
+                      void onLogoSelected(e.target.files?.[0] ?? null)
+                    }
                   />
                   <Button
                     size="sm"
@@ -510,7 +558,9 @@ export function SettingsPanel() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">Brand color</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Brand color
+              </p>
               <div className="flex flex-wrap items-center gap-2">
                 {PRESET_COLORS.map((c) => (
                   <button
@@ -570,7 +620,9 @@ export function SettingsPanel() {
                       max={100}
                       step={0.5}
                       value={taxRate}
-                      onChange={(e) => setTaxRate(Math.max(0, Number(e.target.value) || 0))}
+                      onChange={(e) =>
+                        setTaxRate(Math.max(0, Number(e.target.value) || 0))
+                      }
                       className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm tabular-nums text-foreground"
                     />
                   </label>
@@ -582,7 +634,9 @@ export function SettingsPanel() {
                       step={100}
                       value={shippingMajor}
                       onChange={(e) =>
-                        setShippingMajor(Math.max(0, Number(e.target.value) || 0))
+                        setShippingMajor(
+                          Math.max(0, Number(e.target.value) || 0),
+                        )
                       }
                       className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm tabular-nums text-foreground"
                     />
@@ -607,19 +661,34 @@ export function SettingsPanel() {
                 Shown on bank-transfer pay links (default payment method)
               </CardDescription>
             </div>
-            <Button size="sm" className="gap-2" disabled={!!saving} onClick={() => void saveBank()}>
-              {saving === "bank" ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!!saving}
+              onClick={() => void saveBank()}
+            >
+              {saving === "bank" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
               Save bank details
             </Button>
           </CardHeader>
           <CardContent className="grid gap-4 pt-4 sm:grid-cols-3">
             <Field label="Bank name" value={bankName} onChange={setBankName} />
-            <Field label="Account name" value={accountName} onChange={setAccountName} />
-            <Field label="Account number" value={accountNumber} onChange={setAccountNumber} />
+            <Field
+              label="Account name"
+              value={accountName}
+              onChange={setAccountName}
+            />
+            <Field
+              label="Account number"
+              value={accountNumber}
+              onChange={setAccountNumber}
+            />
             <div className="rounded-lg border border-border bg-secondary/40 p-4 sm:col-span-3">
               <p className="text-sm text-muted-foreground">
-                Customers transfer, mark paid (optional proof), then you verify before the order is
-                confirmed.
+                Customers transfer, mark paid (optional proof), then you verify
+                before the order is confirmed.
               </p>
             </div>
           </CardContent>
@@ -631,7 +700,9 @@ export function SettingsPanel() {
               <CreditCard className="size-4 text-primary" />
               Payment methods
             </CardTitle>
-            <CardDescription>Bank transfer is the default path in Workspace today</CardDescription>
+            <CardDescription>
+              Bank transfer is the default path in Workspace today
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 pt-4">
             <ToggleRow
@@ -656,12 +727,15 @@ export function SettingsPanel() {
               Plan
             </CardTitle>
             <CardDescription>
-              {seats.label} · {seats.teamSeats} team seats · {seats.aiAgents} AI seats
+              {seats.label} · {seats.teamSeats} team seats · {seats.aiAgents} AI
+              seats
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <p>{seats.blurb}</p>
-            <p className="mt-2 text-xs">Tier is stored on the business record (read-only here).</p>
+            <p className="mt-2 text-xs">
+              Tier is stored on the business record (read-only here).
+            </p>
           </CardContent>
         </Card>
 
@@ -671,10 +745,17 @@ export function SettingsPanel() {
               <Bot className="size-4 text-primary" />
               AI agents
             </CardTitle>
-            <CardDescription>Separate from human sales team — runtime later</CardDescription>
+            <CardDescription>
+              Separate from human sales team — runtime later
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="sm" variant="outline" className="bg-card" render={<Link href="/ai-agents" />}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-card"
+              render={<Link href="/ai-agents" />}
+            >
               Open AI seats
             </Button>
           </CardContent>
@@ -727,7 +808,9 @@ function ToggleRow({
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <Badge variant={enabled ? "secondary" : "outline"}>{enabled ? "On" : "Off"}</Badge>
+      <Badge variant={enabled ? "secondary" : "outline"}>
+        {enabled ? "On" : "Off"}
+      </Badge>
     </div>
   )
 }

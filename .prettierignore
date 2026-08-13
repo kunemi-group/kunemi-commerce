@@ -1,0 +1,10 @@
+**/node_modules/**
+**/dist/**
+**/.next/**
+**/coverage/**
+**/*.sqlite*
+backend/pnpm-lock.yaml
+frontend/pnpm-lock.yaml
+cloudflare-platform/package-lock.json
+frontend/tsconfig.tsbuildinfo
+pnpm-lock.yaml

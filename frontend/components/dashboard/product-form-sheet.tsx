@@ -98,11 +98,15 @@ export function ProductFormSheet({
       const v = mode.variant
       setSku(v.sku ?? "")
       setVariantLabel(
-        v.attributes ? Object.values(v.attributes).join(" / ") || "Default" : "Default",
+        v.attributes
+          ? Object.values(v.attributes).join(" / ") || "Default"
+          : "Default",
       )
       const major = minorToMajor(v.priceCents, money.currency)
       setPriceMajor(
-        Number.isInteger(major) ? String(major) : String(Number(major.toFixed(4))),
+        Number.isInteger(major)
+          ? String(major)
+          : String(Number(major.toFixed(4))),
       )
       setThreshold(String(v.lowStockThreshold ?? 5))
       setTaxExempt(!!v.taxExempt)
@@ -271,7 +275,12 @@ export function ProductFormSheet({
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           {mode?.type === "create" || mode?.type === "edit-product" ? (
             <>
-              <Field label="Product name" value={name} onChange={setName} placeholder="e.g. Ankara dress" />
+              <Field
+                label="Product name"
+                value={name}
+                onChange={setName}
+                placeholder="e.g. Ankara dress"
+              />
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
                   Description (optional)
@@ -315,7 +324,8 @@ export function ProductFormSheet({
                 onChange={setVariantLabel}
                 placeholder="e.g. Size M / Red"
               />
-              {(mode.type === "add-variant" || mode.type === "edit-variant") && (
+              {(mode.type === "add-variant" ||
+                mode.type === "edit-variant") && (
                 <ImageField
                   url={imageUrl}
                   uploading={uploading}
@@ -327,7 +337,12 @@ export function ProductFormSheet({
                   label="Variant image (optional)"
                 />
               )}
-              <Field label="SKU (optional)" value={sku} onChange={setSku} placeholder="SKU-001" />
+              <Field
+                label="SKU (optional)"
+                value={sku}
+                onChange={setSku}
+                placeholder="SKU-001"
+              />
               <Field
                 label={money.label("Unit price")}
                 value={priceMajor}
@@ -367,10 +382,18 @@ export function ProductFormSheet({
         </div>
 
         <SheetFooter className="border-t border-border sm:flex-row">
-          <Button variant="outline" className="bg-card" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            className="bg-card"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button disabled={busy} className="gap-2" onClick={() => void submit()}>
+          <Button
+            disabled={busy}
+            className="gap-2"
+            onClick={() => void submit()}
+          >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             Save
           </Button>
@@ -426,7 +449,6 @@ function ImageField({
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {url ? (
         <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}
             alt=""

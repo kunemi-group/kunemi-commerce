@@ -4,11 +4,6 @@ import axios from "axios"
 
 describe("getApiErrorMessage", () => {
   it("reads string message from axios error body", () => {
-    const err = {
-      isAxiosError: true,
-      response: { data: { message: "Order not found" }, status: 404 },
-      message: "Request failed",
-    }
     // axios.isAxiosError needs a real AxiosError shape — use AxiosError constructor
     const ax = new axios.AxiosError("fail")
     ax.response = {

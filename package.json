@@ -1,0 +1,21 @@
+{
+  "name": "kunemi-commerce-tooling",
+  "packageManager": "pnpm@11.1.2",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write --ignore-unknown .",
+    "format:check": "prettier --check --ignore-unknown .",
+    "precommit": "lint-staged"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.4.2"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,json,md,ts,tsx,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

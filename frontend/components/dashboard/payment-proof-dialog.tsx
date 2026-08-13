@@ -85,7 +85,6 @@ export function PaymentProofDialog({
             <div className="flex-1 space-y-4 overflow-y-auto p-4 animate-fade-in">
               <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-secondary via-card to-muted">
                 {proofSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`${API_BASE}/payments/${payment.id}/proof`}
                     alt="Payment proof"
@@ -114,7 +113,10 @@ export function PaymentProofDialog({
                   <div className="mt-2 w-full max-w-xs space-y-2 rounded-lg border border-border/80 bg-background/60 p-4 text-left text-xs backdrop-blur">
                     <Row k="Customer" v={payment.customer} />
                     <Row k="Amount" v={payment.amount} />
-                    <Row k="Reference" v={payment.reference ?? payment.orderId} />
+                    <Row
+                      k="Reference"
+                      v={payment.reference ?? payment.orderId}
+                    />
                     <Row k="Note" v={ext?._customerNote ?? "—"} />
                     <Row k="Claimed" v={payment.updated} />
                   </div>
@@ -156,8 +158,9 @@ export function PaymentProofDialog({
               </label>
 
               <p className="text-xs text-muted-foreground">
-                Confirming moves the order to <strong className="text-foreground">paid</strong>{" "}
-                only after you verify the money landed. Do not confirm from the claim alone.
+                Confirming moves the order to{" "}
+                <strong className="text-foreground">paid</strong> only after you
+                verify the money landed. Do not confirm from the claim alone.
               </p>
             </div>
 
@@ -169,7 +172,9 @@ export function PaymentProofDialog({
                     done === "confirm" ? "text-success" : "text-destructive",
                   )}
                 >
-                  {done === "confirm" ? "Payment verified — order paid" : "Claim rejected"}
+                  {done === "confirm"
+                    ? "Payment verified — order paid"
+                    : "Claim rejected"}
                 </p>
               ) : (
                 <>
