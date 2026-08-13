@@ -9,7 +9,7 @@ import type { Request } from 'express';
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
-} from '../../auth/session-cookies';
+} from '../../shared/auth/session-cookies';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 

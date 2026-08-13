@@ -21,7 +21,7 @@ import {
   UpdateBusinessTierDto,
 } from './dto/admin.dto';
 
-import { MailService } from '../mail/mail.service';
+import { MailService } from '../shared/mail/mail.service';
 
 @Injectable()
 export class AdminService {

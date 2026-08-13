@@ -20,6 +20,27 @@
   - Payments are **pluggable**: default **bank transfer** (business account details); later **Stripe / Paystack** etc. behind the same order/payment state machine.
 - Detail: `docs/Architecture_One_Backend.md` (local docs/).
 
+### ShopFlow marketplace architecture lock
+
+ShopFlow is a buyer-facing marketplace on the same platform, but it is not a
+second view of Workspace seller orders. The backend boundary is explicit even
+while ShopFlow checkout remains a future phase.
+
+- A buyer may place products from multiple businesses into one cart.
+- One ShopFlow checkout group represents the buyer's combined purchase.
+- The checkout group splits into one marketplace seller order per business.
+- Workspace continues to manage seller operations and its existing seller-owned
+  `Order` records.
+- ShopFlow will later have separate buyer cart, checkout, marketplace-order,
+  escrow, and shipping modules/API routes.
+- ShopFlow will charge one platform-level shipping fee per checkout; internal
+  seller allocation is for settlement/reporting only.
+- ShopFlow payments will be centralized platform escrow with release,
+  refund, and reconciliation rules; they are separate from Workspace's current
+  seller-owned bank-transfer payment flow.
+- The current public catalog read API lives under `backend/src/shopflow/catalog`,
+  while its existing `/api/store/:slug` routes remain backward-compatible.
+
 ### How to run
 
 ```bash
@@ -211,7 +232,7 @@ Complete the P0 security work before production deployment or adding more public
 - [ ] Revoke sessions after logout, password reset, or security-sensitive account changes.
 - [x] Make Next.js route protection validate a server-verifiable session rather than cookie presence.
 - [x] Remove legacy token-storage migration code after a bounded release.
-- **Files:** `frontend/api/client.ts`, `frontend/lib/cookies.ts`, `frontend/proxy.ts`, `frontend/lib/auth-context.tsx`, `backend/src/auth/`.
+- **Files:** `frontend/api/client.ts`, `frontend/lib/cookies.ts`, `frontend/proxy.ts`, `frontend/lib/auth-context.tsx`, `backend/src/shared/auth/`.
 - **Done when:** browser JavaScript cannot read long-lived credentials and auth/session/CSRF e2e tests pass.
 
 #### SEC-P1-01 — Harden login, OTP, registration, and recovery
@@ -222,7 +243,7 @@ Complete the P0 security work before production deployment or adding more public
 - [ ] Return consistent public responses to limit account enumeration.
 - [ ] Benchmark/document password hashing policy; consider Argon2id for new passwords.
 - [ ] Add password change/reset and security event logging.
-- **Files:** `backend/src/auth/`, `backend/src/database/entities/user.entity.ts`, `backend/src/main.ts`.
+- **Files:** `backend/src/shared/auth/`, `backend/src/database/entities/user.entity.ts`, `backend/src/main.ts`.
 - **Done when:** brute-force, OTP replay, refresh replay, and enumeration tests pass.
 
 #### SEC-P1-02 — Harden uploads and private media
@@ -235,7 +256,7 @@ Complete the P0 security work before production deployment or adding more public
 - [ ] Require tenant authorization or short-lived signed URLs for private objects.
 - [ ] Set safe `Content-Disposition`, `X-Content-Type-Options`, cache, and CSP headers.
 - [ ] Add malware scanning/quarantine hooks and adversarial upload tests.
-- **Files:** `backend/src/storage/`, `backend/src/payments/payments.service.ts`, `frontend/api/services/uploads.ts`.
+- **Files:** `backend/src/shared/storage/`, `backend/src/workspace/payments/payments.service.ts`, `frontend/api/services/uploads.ts`.
 - **Done when:** only verified allowlisted content is stored and private media cannot be fetched anonymously or across tenants.
 
 #### SEC-P1-03 — Add platform HTTP security controls
@@ -338,6 +359,15 @@ Complete the P0 security work before production deployment or adding more public
 - [x] PaymentProvider registry (bank_transfer live; Stripe/Paystack stubs)
 - [x] Wire Workspace UI off `formatNgn` → `useMoney()` / `formatMoney(..., currency)`
 - [x] Currency polish: form labels, shipping major/minor, revenue chart, PDF currency, product edit price
+- [x] Record ShopFlow marketplace boundary: multi-seller checkout groups, seller-order splits, one platform shipping fee, and centralized escrow
+- [x] Group the existing public catalog read API under `backend/src/shopflow/catalog` without changing its routes or behavior
+- [ ] Create ShopFlow buyer cart and checkout-group entities/modules (future phase; do not reuse Workspace `Order` semantics)
+- [ ] Create ShopFlow marketplace seller-order split model linked to a checkout group
+- [ ] Add one platform-level ShopFlow shipping calculation and internal seller allocation
+- [ ] Add centralized ShopFlow escrow payment, release, refund, and reconciliation workflows
+- [ ] Add ShopFlow checkout write path: validate catalog/stock/prices server-side, split by seller, reserve stock, and create buyer-visible payment result
+- [ ] Add buyer access rules for checkout groups and seller-order projections
+- [ ] Add idempotency, concurrency, refund, settlement, and cross-seller checkout tests
 - [ ] Card gateway webhooks (Stripe/Paystack) as secondary methods behind provider interface
 - [ ] Courier API providers + webhooks (manual fulfillment already works)
 - [ ] External messaging (WA/IG) — separate from in-app ShopFlow↔Workspace chat
@@ -372,7 +402,7 @@ Complete the P0 security work before production deployment or adding more public
 8. ~~Team invite / RBAC~~  
 9. ~~Cloudflare R2 + ShopFlow public catalog~~  
 10. ~~Buyer auth + chat API (buyer endpoints + Workspace inbox)~~  
-11. **ShopFlow buyer FE + checkout → Workspace orders**  
+11. **ShopFlow marketplace buyer FE + checkout groups → seller-order splits and centralized escrow**
 12. External messaging (WA/IG)  
 13. Card gateway / courier APIs (optional)  
 14. AI agent design (separate from human Sales Team)
@@ -386,15 +416,15 @@ Complete the P0 security work before production deployment or adding more public
 | Frontend API layer | `frontend/api/` |
 | Chart analytics helpers | `frontend/api/analytics.ts` |
 | Product form sheet | `frontend/components/dashboard/product-form-sheet.tsx` |
-| Documents API | `backend/src/documents/` |
+| Documents API | `backend/src/shared/documents/` |
 | Documents UI hooks | `frontend/api/hooks/use-documents.ts` |
 | Create quote/invoice drawer | `frontend/components/dashboard/create-document-drawer.tsx` |
-| Team invite / roles | `backend/src/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
+| Team invite / roles | `backend/src/workspace/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
 | Roles guard | `backend/src/common/guards/roles.guard.ts` |
-| Chat API + Workspace inbox | `backend/src/chat/`, `frontend/app/inbox/` |
+| Chat API + Workspace inbox | `backend/src/shared/chat/`, `frontend/app/inbox/` |
 | Buyer auth | `POST /api/auth/buyer/register`, `POST /api/auth/buyer/login` |
-| R2 / uploads | `backend/src/storage/` |
-| ShopFlow store API | `backend/src/store/` |
+| R2 / uploads | `backend/src/shared/storage/` |
+| ShopFlow store API | `backend/src/shopflow/catalog/` |
 | Upload client | `frontend/api/services/uploads.ts` |
 | Auth session | `frontend/lib/auth-context.tsx` |
 | Remaining mock domain data | `frontend/lib/data.ts` |
@@ -404,11 +434,11 @@ Complete the P0 security work before production deployment or adding more public
 | Public track UI | `frontend/app/track/[token]/` |
 | Docker Postgres | `backend/docker-compose.yml` |
 | RLS and baseline migration | `backend/src/database/migrations/1710000000000-BaselineSchemaAndRls.ts` |
-| Auth | `backend/src/auth/` |
-| Businesses | `backend/src/businesses/` |
-| Orders | `backend/src/orders/` |
-| Inventory | `backend/src/inventory/` |
-| Payments | `backend/src/payments/` |
-| Deliveries | `backend/src/deliveries/` |
-| Public tracking | `backend/src/tracking/` |
+| Auth | `backend/src/shared/auth/` |
+| Businesses | `backend/src/workspace/businesses/` |
+| Orders | `backend/src/workspace/orders/` |
+| Inventory | `backend/src/workspace/inventory/` |
+| Payments | `backend/src/workspace/payments/` |
+| Deliveries | `backend/src/workspace/fulfillment/deliveries/` |
+| Public tracking | `backend/src/workspace/fulfillment/tracking/` |
 | Local product docs (not in git) | `docs/` |
