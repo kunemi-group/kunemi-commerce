@@ -1,0 +1,8 @@
+packages:
+  - '.'
+
+allowBuilds:
+  '@scarf/scarf': false
+  bcrypt: true
+  better-sqlite3: true
+  unrs-resolver: true

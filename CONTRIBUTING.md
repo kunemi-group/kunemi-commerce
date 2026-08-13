@@ -43,7 +43,9 @@ files before commit. CI remains the authoritative full-project gate.
 
 ## Approved dependency builds
 
-pnpm permits only the native dependency build scripts required by each app:
-`bcrypt`, `better-sqlite3`, and `unrs-resolver` for the backend, and
-`unrs-resolver` for the frontend. Keep this allowlist narrow and review any
-new package before approving its build script.
+pnpm build policy lives in each app's `pnpm-workspace.yaml`. It permits only
+the native scripts required by each app: `bcrypt`, `better-sqlite3`, and
+`unrs-resolver` for the backend, and `unrs-resolver` for the frontend.
+`@scarf/scarf`, `msw`, and `sharp` are explicitly denied because their install
+scripts are not required by the current applications. Keep this policy narrow
+and review any new package before approving its build script.
