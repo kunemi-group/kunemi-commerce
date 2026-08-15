@@ -166,16 +166,16 @@ export class PaymentsService {
       expired:
         order.status === 'expired' ||
         payment.status === 'expired' ||
-        (order.status === 'pending' &&
-          due !== null &&
-          due < now),
+        (order.status === 'pending' && due !== null && due < now),
       canClaim:
         order.status === 'pending' &&
         payment.status === 'awaiting_transfer' &&
         customerView.requiresManualClaim &&
         (due === null || due >= now),
       underReview: order.status === 'payment_review',
-      paid: order.status === 'paid' || ['shipped', 'delivered'].includes(order.status),
+      paid:
+        order.status === 'paid' ||
+        ['shipped', 'delivered'].includes(order.status),
       rejectReason: payment.rejectReason,
       checkoutUrl: customerView.checkoutUrl,
       requiresManualClaim: customerView.requiresManualClaim,
@@ -230,7 +230,9 @@ export class PaymentsService {
       if (order.status === 'expired' || payment.status === 'expired') {
         throw new BadRequestException('This payment link has expired');
       }
-      if (['paid', 'shipped', 'delivered', 'cancelled'].includes(order.status)) {
+      if (
+        ['paid', 'shipped', 'delivered', 'cancelled'].includes(order.status)
+      ) {
         throw new BadRequestException(
           `Order is already ${order.status} — no claim needed`,
         );
@@ -240,7 +242,10 @@ export class PaymentsService {
           'Payment already submitted — waiting for the business to verify',
         );
       }
-      if (order.status !== 'pending' || payment.status !== 'awaiting_transfer') {
+      if (
+        order.status !== 'pending' ||
+        payment.status !== 'awaiting_transfer'
+      ) {
         throw new BadRequestException(
           `Cannot claim payment in order status ${order.status}`,
         );
@@ -257,11 +262,7 @@ export class PaymentsService {
       let proofMimeType: string | null = null;
 
       if (dto.proofBase64?.trim()) {
-        const saved = await this.saveProof(
-          payment.id,
-          dto,
-          payment.businessId,
-        );
+        const saved = await this.saveProof(payment.id, dto, payment.businessId);
         proofPath = saved.path;
         proofFilename = saved.filename;
         proofMimeType = saved.mimeType;
@@ -351,7 +352,10 @@ export class PaymentsService {
             0,
             variant.stockReserved - item.quantity,
           );
-          variant.stockOnHand = Math.max(0, variant.stockOnHand - item.quantity);
+          variant.stockOnHand = Math.max(
+            0,
+            variant.stockOnHand - item.quantity,
+          );
           await variantRepo.save(variant);
         }
       }
@@ -419,7 +423,9 @@ export class PaymentsService {
         this.safeUnlink(payment.proofPath);
       }
 
-      const reason = dto.reason?.trim() || 'Transfer not verified — please recheck and try again';
+      const reason =
+        dto.reason?.trim() ||
+        'Transfer not verified — please recheck and try again';
 
       payment.status = 'awaiting_transfer';
       payment.claimedAt = null;
@@ -501,15 +507,26 @@ export class PaymentsService {
   }
 
   /** Mark payment expired when order hold expires */
-  async markExpiredForOrders(orderIds: string[]) {
-    if (!orderIds.length) return;
-    await this.payments.update(
-      {
-        orderId: In(orderIds),
-        status: In(['awaiting_transfer', 'claimed']),
-      },
-      { status: 'expired' },
-    );
+  async markExpiredForOrders(
+    expiredOrders: Array<{ id: string; businessId: string }>,
+  ) {
+    const ordersByBusiness = new Map<string, string[]>();
+    for (const order of expiredOrders) {
+      const ids = ordersByBusiness.get(order.businessId) ?? [];
+      ids.push(order.id);
+      ordersByBusiness.set(order.businessId, ids);
+    }
+
+    for (const [businessId, orderIds] of ordersByBusiness) {
+      await this.payments.update(
+        {
+          orderId: In(orderIds),
+          businessId,
+          status: In(['awaiting_transfer', 'claimed']),
+        },
+        { status: 'expired' },
+      );
+    }
   }
 
   private async releaseStock(

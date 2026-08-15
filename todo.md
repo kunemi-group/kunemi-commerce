@@ -3,7 +3,8 @@
 **Last updated:** 2026-08-09
 **Product:** Kunemi Workspace under **Kunemi Commerce**  
 **Repo:** https://github.com/kunemi-group/kunemi-commerce.git  
-**Note:** `docs/` is gitignored (local confidential product docs only).
+**Note:** `docs/` is gitignored (local confidential product docs only).  
+**Workspace product roadmap** (simplify app, insights, storefront): `workspace-todo.md`. This file stays monorepo, security, ShopFlow marketplace, and infra.
 
 **Current state:** Multi-tenant NestJS API on Docker Postgres (JWT, orders, optional inventory, bank-transfer payments, deliveries, tracking, **quotations/invoices**, **Cloudflare R2 storage**, **ShopFlow public store catalog**, RLS) with Next.js UI largely wired via **Axios + TanStack Query**. Phase 1 commerce + documents + store backend ready; messaging and AI remain UI-only.
 
@@ -63,25 +64,25 @@ pnpm test           # Vitest (api layer + totals)
 
 ## Overall progress
 
-| Layer | Status |
-|-------|--------|
-| Product docs (PRD + Phase 1 tech plan) | Done (local `docs/`, not in git) |
-| NestJS + Postgres persistence | **Done** (+ SQLite fallback) |
-| Postgres RLS + public pay/track definer paths | **Done** |
-| Bank-transfer payments (default) | **Done** end-to-end |
-| Frontend API layer (`frontend/api`) | **Done** — Axios + TanStack Query + Vitest |
-| Wire core commerce UI → API | **Done** — auth, onboarding, orders, pay, payments, inventory, deliveries, track, settings, team |
-| Dashboard KPIs (counts / revenue / review) | **Live** from orders/payments |
-| Dashboard charts (revenue series, payment split) | **Live** (14-day revenue + payment methods) |
-| Product create / edit / variant / restock / delete UI | **Done** |
-| Sales team home widget | **Live roster** (no fake conversion metrics) |
-| Quotations / invoices | **Done** — API + create/list/status + PDF preview |
-| Cloudflare R2 storage | **Done** — uploads + media serve; local fallback |
-| ShopFlow public catalog | **Done** — `GET /api/store/:slug/products` |
-| Team invite / RBAC mutations | **Done** — invite, role change, remove + RolesGuard |
-| Cloudflare Edge Platform Router | **Done** — `cloudflare-platform` Worker + KV domain lookup |
-| Platform Super Admin Module | **Done** — `super_admin` role, GMV metrics, store suspension, vanity domains, `/admin` UI |
-| Integrations (WA/IG, card gateway, courier APIs) | **Not started** (ShopFlow store **read API** ready) |
+| Layer                                                 | Status                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Product docs (PRD + Phase 1 tech plan)                | Done (local `docs/`, not in git)                                                                 |
+| NestJS + Postgres persistence                         | **Done** (+ SQLite fallback)                                                                     |
+| Postgres RLS + public pay/track definer paths         | **Done**                                                                                         |
+| Bank-transfer payments (default)                      | **Done** end-to-end                                                                              |
+| Frontend API layer (`frontend/api`)                   | **Done** — Axios + TanStack Query + Vitest                                                       |
+| Wire core commerce UI → API                           | **Done** — auth, onboarding, orders, pay, payments, inventory, deliveries, track, settings, team |
+| Dashboard KPIs (counts / revenue / review)            | **Live** from orders/payments                                                                    |
+| Dashboard charts (revenue series, payment split)      | **Live** (14-day revenue + payment methods)                                                      |
+| Product create / edit / variant / restock / delete UI | **Done**                                                                                         |
+| Sales team home widget                                | **Live roster** (no fake conversion metrics)                                                     |
+| Quotations / invoices                                 | **Done** — API + create/list/status + PDF preview                                                |
+| Cloudflare R2 storage                                 | **Done** — uploads + media serve; local fallback                                                 |
+| ShopFlow public catalog                               | **Done** — `GET /api/store/:slug/products`                                                       |
+| Team invite / RBAC mutations                          | **Done** — invite, role change, remove + RolesGuard                                              |
+| Cloudflare Edge Platform Router                       | **Done** — `cloudflare-platform` Worker + KV domain lookup                                       |
+| Platform Super Admin Module                           | **Done** — `super_admin` role, GMV metrics, store suspension, vanity domains, `/admin` UI        |
+| Integrations (WA/IG, card gateway, courier APIs)      | **Not started** (ShopFlow store **read API** ready)                                              |
 
 **Rough completion:** backend Phase 1 ~**97%** · frontend live-wired ~**92%**
 
@@ -132,33 +133,33 @@ pnpm test           # Vitest (api layer + totals)
 
 #### Live against API
 
-| Route / surface | Status |
-|-----------------|--------|
-| `/login`, `/register` | Live auth |
-| `/onboarding` | Forced when incomplete; PATCH business |
-| `/` | Live KPIs, revenue chart, payment split, attention inbox, recent orders, low stock, order status, team roster |
-| `/workspace` | Live pipeline + create order; **open chats still sample** |
-| `/orders` | Live table, KPIs, create/detail (cancel, create delivery) |
-| `/payments` | Live review queue + verify/reject + proof open |
-| `/inventory` | Live list, restock, create/edit product & variant, delete, KPIs |
-| `/deliveries` | Live table + status, KPIs |
-| `/team` | Live member list + KPIs |
-| `/settings` | Live business/bank/tax/shipping/brand PATCH |
-| `/pay/[token]` | Public bank-transfer pay + claim (TanStack) |
-| `/track/[token]` | Public tracking (TanStack) |
+| Route / surface       | Status                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `/login`, `/register` | Live auth                                                                                                     |
+| `/onboarding`         | Forced when incomplete; PATCH business                                                                        |
+| `/`                   | Live KPIs, revenue chart, payment split, attention inbox, recent orders, low stock, order status, team roster |
+| `/workspace`          | Live pipeline + create order; **open chats still sample**                                                     |
+| `/orders`             | Live table, KPIs, create/detail (cancel, create delivery)                                                     |
+| `/payments`           | Live review queue + verify/reject + proof open                                                                |
+| `/inventory`          | Live list, restock, create/edit product & variant, delete, KPIs                                               |
+| `/deliveries`         | Live table + status, KPIs                                                                                     |
+| `/team`               | Live member list + KPIs                                                                                       |
+| `/settings`           | Live business/bank/tax/shipping/brand PATCH                                                                   |
+| `/pay/[token]`        | Public bank-transfer pay + claim (TanStack)                                                                   |
+| `/track/[token]`      | Public tracking (TanStack)                                                                                    |
 
 #### Still mock / UI-only
 
-| Route / surface | Notes |
-|-----------------|-------|
-| `/quotations`, `/documents/quotation/[id]` | Mock data + PDF preview |
-| `/invoices`, `/documents/invoice/[id]` | Mock data + PDF preview |
-| `/ai-agents` | Tier placeholder only |
-| Workspace open chats | Sample inbox until messaging API |
-| Role demo switcher | Local role UX; not full server RBAC |
-| Export buttons | Chrome only |
-| Chat→paid conversion on team widget | Needs messaging attribution |
-| Hosted public quote/invoice pay link | Internal preview + WhatsApp share for now |
+| Route / surface                            | Notes                                     |
+| ------------------------------------------ | ----------------------------------------- |
+| `/quotations`, `/documents/quotation/[id]` | Mock data + PDF preview                   |
+| `/invoices`, `/documents/invoice/[id]`     | Mock data + PDF preview                   |
+| `/ai-agents`                               | Tier placeholder only                     |
+| Workspace open chats                       | Sample inbox until messaging API          |
+| Role demo switcher                         | Local role UX; not full server RBAC       |
+| Export buttons                             | Chrome only                               |
+| Chat→paid conversion on team widget        | Needs messaging attribution               |
+| Hosted public quote/invoice pay link       | Internal preview + WhatsApp share for now |
 
 #### Other frontend done
 
@@ -206,6 +207,7 @@ Complete the P0 security work before production deployment or adding more public
 - [x] Ensure cleanup uses the same database connection and cannot leak tenant context to another request.
 - [ ] Require `{ id, businessId }` for all tenant-owned reads and mutations, including scheduled jobs and relation reloads.
 - [x] Add `businessId` to the order-expiry variant lookup and other ID-only tenant-owned queries.
+- [x] Carry `{ orderId, businessId }` through scheduled order expiry and payment expiration updates.
 - [x] Run PostgreSQL with a non-owner application role and enable/verify `FORCE ROW LEVEL SECURITY` where applicable.
 - [ ] Add concurrent cross-tenant tests for orders, products, variants, payments, proofs, deliveries, documents, chats, team members, and expiry processing.
 - **Files:** `backend/src/common/interceptors/tenant-context.interceptor.ts`, RLS files, all tenant module services.
@@ -282,7 +284,7 @@ Complete the P0 security work before production deployment or adding more public
 
 #### ARCH-P1-01 — Enforce frontend boundaries
 
-- [ ] Remove deprecated `frontend/lib/api.ts` after migrating remaining imports.
+- [x] Remove deprecated `frontend/lib/api.ts` after migrating remaining imports.
 - [ ] Keep `app/` pages focused on routing/composition; move domain UI/state into `features/<domain>`.
 - [ ] Keep transport types, query keys, client, and services in `frontend/api/` without UI dependencies.
 - [ ] Generate or validate frontend API types from the backend OpenAPI contract.
@@ -392,53 +394,53 @@ Complete the P0 security work before production deployment or adding more public
 
 ## Suggested next build order
 
-1. ~~Backend skeleton + auth + tenant isolation~~  
-2. ~~Products / inventory + create order + holds~~  
-3. ~~Deliveries + tracking + RLS~~  
-4. ~~Bank transfer payments (default)~~  
-5. ~~Frontend API layer + wire core commerce screens~~  
-6. ~~Product CRUD UI + live dashboard charts~~  
-7. ~~Quotes / invoices backend + wire documents~~  
-8. ~~Team invite / RBAC~~  
-9. ~~Cloudflare R2 + ShopFlow public catalog~~  
-10. ~~Buyer auth + chat API (buyer endpoints + Workspace inbox)~~  
+1. ~~Backend skeleton + auth + tenant isolation~~
+2. ~~Products / inventory + create order + holds~~
+3. ~~Deliveries + tracking + RLS~~
+4. ~~Bank transfer payments (default)~~
+5. ~~Frontend API layer + wire core commerce screens~~
+6. ~~Product CRUD UI + live dashboard charts~~
+7. ~~Quotes / invoices backend + wire documents~~
+8. ~~Team invite / RBAC~~
+9. ~~Cloudflare R2 + ShopFlow public catalog~~
+10. ~~Buyer auth + chat API (buyer endpoints + Workspace inbox)~~
 11. **ShopFlow marketplace buyer FE + checkout groups → seller-order splits and centralized escrow**
-12. External messaging (WA/IG)  
-13. Card gateway / courier APIs (optional)  
+12. External messaging (WA/IG)
+13. Card gateway / courier APIs (optional)
 14. AI agent design (separate from human Sales Team)
 
 ---
 
 ## Key code pointers
 
-| Area | Path |
-|------|------|
-| Frontend API layer | `frontend/api/` |
-| Chart analytics helpers | `frontend/api/analytics.ts` |
-| Product form sheet | `frontend/components/dashboard/product-form-sheet.tsx` |
-| Documents API | `backend/src/shared/documents/` |
-| Documents UI hooks | `frontend/api/hooks/use-documents.ts` |
-| Create quote/invoice drawer | `frontend/components/dashboard/create-document-drawer.tsx` |
-| Team invite / roles | `backend/src/workspace/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
-| Roles guard | `backend/src/common/guards/roles.guard.ts` |
-| Chat API + Workspace inbox | `backend/src/shared/chat/`, `frontend/app/inbox/` |
-| Buyer auth | `POST /api/auth/buyer/register`, `POST /api/auth/buyer/login` |
-| R2 / uploads | `backend/src/shared/storage/` |
-| ShopFlow store API | `backend/src/shopflow/catalog/` |
-| Upload client | `frontend/api/services/uploads.ts` |
-| Auth session | `frontend/lib/auth-context.tsx` |
-| Remaining mock domain data | `frontend/lib/data.ts` |
-| VAT + shipping totals | `frontend/lib/pdf/totals.ts` |
-| Nav | `frontend/components/dashboard/nav-items.ts` |
-| Public pay UI | `frontend/app/pay/[token]/` |
-| Public track UI | `frontend/app/track/[token]/` |
-| Docker Postgres | `backend/docker-compose.yml` |
-| RLS and baseline migration | `backend/src/database/migrations/1710000000000-BaselineSchemaAndRls.ts` |
-| Auth | `backend/src/shared/auth/` |
-| Businesses | `backend/src/workspace/businesses/` |
-| Orders | `backend/src/workspace/orders/` |
-| Inventory | `backend/src/workspace/inventory/` |
-| Payments | `backend/src/workspace/payments/` |
-| Deliveries | `backend/src/workspace/fulfillment/deliveries/` |
-| Public tracking | `backend/src/workspace/fulfillment/tracking/` |
-| Local product docs (not in git) | `docs/` |
+| Area                            | Path                                                                                   |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| Frontend API layer              | `frontend/api/`                                                                        |
+| Chart analytics helpers         | `frontend/api/analytics.ts`                                                            |
+| Product form sheet              | `frontend/components/dashboard/product-form-sheet.tsx`                                 |
+| Documents API                   | `backend/src/shared/documents/`                                                        |
+| Documents UI hooks              | `frontend/api/hooks/use-documents.ts`                                                  |
+| Create quote/invoice drawer     | `frontend/components/dashboard/create-document-drawer.tsx`                             |
+| Team invite / roles             | `backend/src/workspace/team/`, `frontend/components/dashboard/invite-member-sheet.tsx` |
+| Roles guard                     | `backend/src/common/guards/roles.guard.ts`                                             |
+| Chat API + Workspace inbox      | `backend/src/shared/chat/`, `frontend/app/inbox/`                                      |
+| Buyer auth                      | `POST /api/auth/buyer/register`, `POST /api/auth/buyer/login`                          |
+| R2 / uploads                    | `backend/src/shared/storage/`                                                          |
+| ShopFlow store API              | `backend/src/shopflow/catalog/`                                                        |
+| Upload client                   | `frontend/api/services/uploads.ts`                                                     |
+| Auth session                    | `frontend/lib/auth-context.tsx`                                                        |
+| Remaining mock domain data      | `frontend/lib/data.ts`                                                                 |
+| VAT + shipping totals           | `frontend/lib/pdf/totals.ts`                                                           |
+| Nav                             | `frontend/components/dashboard/nav-items.ts`                                           |
+| Public pay UI                   | `frontend/app/pay/[token]/`                                                            |
+| Public track UI                 | `frontend/app/track/[token]/`                                                          |
+| Docker Postgres                 | `backend/docker-compose.yml`                                                           |
+| RLS and baseline migration      | `backend/src/database/migrations/1710000000000-BaselineSchemaAndRls.ts`                |
+| Auth                            | `backend/src/shared/auth/`                                                             |
+| Businesses                      | `backend/src/workspace/businesses/`                                                    |
+| Orders                          | `backend/src/workspace/orders/`                                                        |
+| Inventory                       | `backend/src/workspace/inventory/`                                                     |
+| Payments                        | `backend/src/workspace/payments/`                                                      |
+| Deliveries                      | `backend/src/workspace/fulfillment/deliveries/`                                        |
+| Public tracking                 | `backend/src/workspace/fulfillment/tracking/`                                          |
+| Local product docs (not in git) | `docs/`                                                                                |
