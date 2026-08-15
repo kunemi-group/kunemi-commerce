@@ -186,7 +186,10 @@ describe('Kunemi Workspace API (e2e)', () => {
   });
 
   it('/api/team protects invite and role-management actions', async () => {
-    await request(app.getHttpServer()).post('/api/team/invite').send({}).expect(401);
+    await request(app.getHttpServer())
+      .post('/api/team/invite')
+      .send({})
+      .expect(401);
 
     const email = `e2e-team-${Date.now()}@test.com`;
     const invited = await agent
@@ -194,21 +197,28 @@ describe('Kunemi Workspace API (e2e)', () => {
       .set('Origin', 'http://localhost:3000')
       .send({
         email,
-        fullName: 'E2E Sales Member',
+        fullName: 'E2E Team Member',
         role: 'sales',
         password: 'Temporary123!',
       })
       .expect(201);
 
     const memberId = invited.body.member.id;
+    // Product surface: Team only (stored as sales). Legacy ops/manager invites rejected.
     expect(invited.body.member.role).toBe('sales');
 
     await agent
       .patch(`/api/team/${memberId}/role`)
       .set('Origin', 'http://localhost:3000')
       .send({ role: 'ops' })
+      .expect(400);
+
+    await agent
+      .patch(`/api/team/${memberId}/role`)
+      .set('Origin', 'http://localhost:3000')
+      .send({ role: 'sales' })
       .expect(200)
-      .expect((res) => expect(res.body.role).toBe('ops'));
+      .expect((res) => expect(res.body.role).toBe('sales'));
 
     await agent
       .delete(`/api/team/${memberId}`)
@@ -218,7 +228,10 @@ describe('Kunemi Workspace API (e2e)', () => {
   });
 
   it('/api/admin/seed (POST) is not exposed', () => {
-    return request(app.getHttpServer()).post('/api/admin/seed').send({}).expect(404);
+    return request(app.getHttpServer())
+      .post('/api/admin/seed')
+      .send({})
+      .expect(404);
   });
 
   it('uses HttpOnly cookies without returning browser-readable tokens', async () => {
@@ -232,7 +245,9 @@ describe('Kunemi Workspace API (e2e)', () => {
     expect(response.body.refreshToken).toBeUndefined();
     const cookies = response.headers['set-cookie'] as unknown as string[];
     expect(cookies.some((cookie) => cookie.includes('HttpOnly'))).toBe(true);
-    expect(cookies.some((cookie) => cookie.includes('SameSite=Lax'))).toBe(true);
+    expect(cookies.some((cookie) => cookie.includes('SameSite=Lax'))).toBe(
+      true,
+    );
   });
 
   it('rejects state-changing cookie requests from an untrusted origin', () => {
