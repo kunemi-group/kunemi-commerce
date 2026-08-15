@@ -1,9 +1,5 @@
 import { apiClient, toApiError } from "../client"
-import type {
-  AuthMeResponse,
-  BusinessProfile,
-  TokenResponse,
-} from "../types"
+import type { AuthMeResponse, BusinessProfile, TokenResponse } from "../types"
 
 export async function loginRequest(email: string, password: string) {
   try {
@@ -25,7 +21,10 @@ export async function registerRequest(input: {
   whatsappNumber?: string
 }) {
   try {
-    const { data } = await apiClient.post<TokenResponse>("/auth/register", input)
+    const { data } = await apiClient.post<TokenResponse>(
+      "/auth/register",
+      input,
+    )
     return data
   } catch (e) {
     throw toApiError(e)
@@ -58,5 +57,48 @@ export async function logoutLocal() {
     await apiClient.post("/auth/logout")
   } catch {
     /* ignore network errors during logout */
+  }
+}
+
+export async function changePasswordRequest(input: {
+  currentPassword: string
+  newPassword: string
+}) {
+  try {
+    const { data } = await apiClient.post<TokenResponse>(
+      "/auth/change-password",
+      input,
+    )
+    return data
+  } catch (e) {
+    throw toApiError(e)
+  }
+}
+
+export async function forgotPasswordRequest(email: string) {
+  try {
+    const { data } = await apiClient.post<{ message: string }>(
+      "/auth/forgot-password",
+      { email },
+    )
+    return data
+  } catch (e) {
+    throw toApiError(e)
+  }
+}
+
+export async function resetPasswordRequest(input: {
+  email: string
+  otp: string
+  newPassword: string
+}) {
+  try {
+    const { data } = await apiClient.post<{ message: string }>(
+      "/auth/reset-password",
+      input,
+    )
+    return data
+  } catch (e) {
+    throw toApiError(e)
   }
 }

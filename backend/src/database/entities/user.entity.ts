@@ -10,19 +10,13 @@ import {
 import { dateTimeType } from '../column-types';
 import { Business } from './business.entity';
 
-/** 
- * Business Staff: 'owner' | 'manager' | 'sales' | 'ops' (requires businessId)
- * End User / Buyer: 'user' (no businessId)
- * Platform Admin: 'admin' | 'super_admin' (no businessId)
+/**
+ * Product roles:
+ * - Workspace: 'owner' | 'team' (requires businessId)
+ * - Buyer / ShopFlow: 'user' (no businessId)
+ * - Platform: 'admin' | 'super_admin' (no businessId)
  */
-export type UserRole =
-  | 'owner'
-  | 'manager'
-  | 'sales'
-  | 'ops'
-  | 'user'
-  | 'admin'
-  | 'super_admin';
+export type UserRole = 'owner' | 'team' | 'user' | 'admin' | 'super_admin';
 
 @Entity('users')
 @Unique(['businessId', 'email'])
@@ -60,14 +54,39 @@ export class User {
   @Column({ name: 'email_verification_otp', type: 'text', nullable: true })
   emailVerificationOtp!: string | null;
 
-  @Column({ name: 'email_verification_expires_at', type: dateTimeType(), nullable: true })
+  @Column({
+    name: 'email_verification_expires_at',
+    type: dateTimeType(),
+    nullable: true,
+  })
   emailVerificationExpiresAt!: Date | null;
 
   @Column({ name: 'refresh_token_hash', type: 'text', nullable: true })
   refreshTokenHash!: string | null;
 
-  @Column({ name: 'refresh_token_expires_at', type: dateTimeType(), nullable: true })
+  @Column({
+    name: 'refresh_token_expires_at',
+    type: dateTimeType(),
+    nullable: true,
+  })
   refreshTokenExpiresAt!: Date | null;
+
+  /**
+   * True after team invite (temp password) until the user sets their own password.
+   * Blocks normal Workspace use until changed.
+   */
+  @Column({ name: 'must_change_password', type: 'boolean', default: false })
+  mustChangePassword!: boolean;
+
+  @Column({ name: 'password_reset_otp', type: 'text', nullable: true })
+  passwordResetOtp!: string | null;
+
+  @Column({
+    name: 'password_reset_expires_at',
+    type: dateTimeType(),
+    nullable: true,
+  })
+  passwordResetExpiresAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: dateTimeType() })
   createdAt!: Date;

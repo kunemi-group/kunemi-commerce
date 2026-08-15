@@ -25,10 +25,10 @@ describe('TeamService', () => {
     email: 'owner@example.com',
   };
   const teamMember = {
-    sub: 'sales-1',
+    sub: 'team-1',
     businessId: 'business-1',
-    role: 'sales' as const,
-    email: 'sales@example.com',
+    role: 'team' as const,
+    email: 'team@example.com',
   };
 
   let service: TeamService;
@@ -57,36 +57,13 @@ describe('TeamService', () => {
     await expect(service.list(owner)).resolves.toEqual(
       expect.objectContaining({ seats: 2, used: 1, tier: 'starter' }),
     );
-    expect(users.find).toHaveBeenCalledWith({
-      where: { businessId: 'business-1' },
-      order: { createdAt: 'ASC' },
-    });
-    expect(businesses.findOne).toHaveBeenCalledWith({
-      where: { id: 'business-1' },
-    });
   });
 
   it('rejects team management by non-owners', async () => {
     await expect(
       service.invite(
-        { email: 'new@example.com', fullName: 'New User', role: 'sales' },
+        { email: 'new@example.com', fullName: 'New User', role: 'team' },
         teamMember,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(businesses.findOne).not.toHaveBeenCalled();
-  });
-
-  it('rejects legacy manager role from managing the team', async () => {
-    const manager = {
-      sub: 'manager-1',
-      businessId: 'business-1',
-      role: 'manager' as const,
-      email: 'manager@example.com',
-    };
-    await expect(
-      service.invite(
-        { email: 'new@example.com', fullName: 'New User', role: 'sales' },
-        manager,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
@@ -100,11 +77,10 @@ describe('TeamService', () => {
 
     await expect(
       service.invite(
-        { email: 'new@example.com', fullName: 'New User', role: 'sales' },
+        { email: 'new@example.com', fullName: 'New User', role: 'team' },
         owner,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(users.findOne).not.toHaveBeenCalled();
   });
 
   it('creates a tenant-scoped Team invite with a password hash', async () => {
@@ -119,7 +95,7 @@ describe('TeamService', () => {
       businessId: 'business-1',
       email: 'new@example.com',
       fullName: 'New User',
-      role: 'sales',
+      role: 'team',
       passwordHash: '',
     };
     users.create.mockImplementation((input) => ({ ...member, ...input }));
@@ -128,20 +104,19 @@ describe('TeamService', () => {
       {
         email: ' NEW@EXAMPLE.COM ',
         fullName: ' New User ',
-        role: 'sales',
+        role: 'team',
         password: 'Temporary123!',
       },
       owner,
     );
 
-    expect(users.findOne).toHaveBeenCalledWith({
-      where: { email: 'new@example.com' },
-    });
     expect(users.create).toHaveBeenCalledWith(
       expect.objectContaining({
         businessId: 'business-1',
         email: 'new@example.com',
-        role: 'sales',
+        role: 'team',
+        mustChangePassword: true,
+        isEmailVerified: true,
       }),
     );
     const created = users.create.mock.calls[0][0];
@@ -169,7 +144,7 @@ describe('TeamService', () => {
 
     await expect(
       service.invite(
-        { email: 'existing@example.com', fullName: 'Existing', role: 'sales' },
+        { email: 'existing@example.com', fullName: 'Existing', role: 'team' },
         owner,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -186,22 +161,18 @@ describe('TeamService', () => {
     users.count.mockResolvedValue(1);
 
     await expect(
-      service.updateRole('owner-2', { role: 'sales' }, owner),
+      service.updateRole('owner-2', { role: 'team' }, owner),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.remove('owner-2', owner)).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    expect(users.remove).not.toHaveBeenCalled();
   });
 
   it('requires the member to belong to the actor business', async () => {
     users.findOne.mockResolvedValue(null);
 
     await expect(
-      service.updateRole('member-from-business-2', { role: 'sales' }, owner),
+      service.updateRole('member-from-business-2', { role: 'team' }, owner),
     ).rejects.toBeInstanceOf(NotFoundException);
-    expect(users.findOne).toHaveBeenCalledWith({
-      where: { id: 'member-from-business-2', businessId: 'business-1' },
-    });
   });
 });

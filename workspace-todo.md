@@ -80,7 +80,7 @@ Product surface (invite UI + copy):
 - [x] Backend: enforce Owner-only for settings / bank / team manage / destructive actions
 - [x] Backend: Team can run commerce ops; no separate manager/ops pages
 - [x] Document: do **not** reintroduce manager/ops until a real page needs them
-- [ ] Password change / forced reset after invite (still required for multi-user)
+- [x] Password change / forced reset after invite (+ Workspace forgot/reset password)
 
 ### A4 — Home = action + light pulse
 
@@ -245,5 +245,7 @@ Do not schedule until A–C are solid:
 | 2026-08-09 | ShopFlow multi-seller stays out of this list                |
 | 2026-08-15 | Phase A on branch `feat/workspace-phase-a-simplify`         |
 | 2026-08-15 | Phase B1 Insights page + period analytics                   |
+| 2026-08-15 | A3 password force-change after invite + Owner/Team reset    |
+| 2026-08-15 | DB migrate legacy manager/sales/ops → team role             |
 
 Update this file as Workspace product work lands. Keep security, CI, and ShopFlow marketplace in `todo.md`.

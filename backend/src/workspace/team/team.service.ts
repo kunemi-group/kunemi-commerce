@@ -78,13 +78,15 @@ export class TeamService {
       dto.password?.trim() || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
-    // Product: Team only (stored as sales for legacy schema compatibility)
+    // Product: Team only. Force password change on first login.
     const member = this.users.create({
       businessId: actor.businessId,
       email,
       fullName: dto.fullName.trim(),
-      role: 'sales',
+      role: 'team',
       passwordHash,
+      isEmailVerified: true,
+      mustChangePassword: true,
     });
     await this.users.save(member);
 

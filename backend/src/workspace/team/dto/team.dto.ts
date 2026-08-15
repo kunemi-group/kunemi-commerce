@@ -7,8 +7,8 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/** Product surface: Team only. Stored as `sales` for backward compatibility. */
-const MEMBER_ROLES = ['sales'] as const;
+/** Product: Team only. */
+const MEMBER_ROLES = ['team'] as const;
 
 export class InviteMemberDto {
   @ApiProperty({
@@ -24,12 +24,12 @@ export class InviteMemberDto {
   fullName!: string;
 
   @ApiProperty({
-    example: 'sales',
-    enum: ['sales'],
-    description: 'Team role (product: Team; stored as sales)',
+    example: 'team',
+    enum: ['team'],
+    description: 'Product role: Team',
   })
   @IsIn(MEMBER_ROLES)
-  role!: 'sales';
+  role!: 'team';
 
   @ApiPropertyOptional({
     example: 'TempPass123!',
@@ -43,11 +43,10 @@ export class InviteMemberDto {
 
 export class UpdateMemberRoleDto {
   @ApiProperty({
-    example: 'sales',
-    enum: ['owner', 'sales'],
-    description:
-      'Owner or Team (sales). Legacy manager/ops may still exist in DB.',
+    example: 'team',
+    enum: ['owner', 'team'],
+    description: 'Product roles: Owner or Team',
   })
-  @IsIn(['owner', 'sales'])
-  role!: 'owner' | 'sales';
+  @IsIn(['owner', 'team'])
+  role!: 'owner' | 'team';
 }

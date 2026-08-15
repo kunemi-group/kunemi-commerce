@@ -14,6 +14,7 @@ import {
   Percent,
   Trash2,
   Loader2,
+  KeyRound,
 } from "lucide-react"
 import {
   Card,
@@ -43,7 +44,7 @@ const PRESET_COLORS = [
 ]
 
 export function SettingsPanel() {
-  const { business, updateBusiness, refresh } = useAuth()
+  const { business, updateBusiness, refresh, changePassword, user } = useAuth()
   const branding = useBranding()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -69,6 +70,9 @@ export function SettingsPanel() {
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
 
   useEffect(() => {
     if (!business) return
@@ -112,6 +116,36 @@ export function SettingsPanel() {
     business?.bank.accountNumber,
     business?.store?.slug,
   ])
+
+  async function savePassword() {
+    setSaving("password")
+    setError(null)
+    setMessage(null)
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters")
+      setSaving(null)
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match")
+      setSaving(null)
+      return
+    }
+    try {
+      await changePassword({
+        currentPassword,
+        newPassword,
+      })
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      setMessage("Password updated")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Password update failed")
+    } finally {
+      setSaving(null)
+    }
+  }
 
   async function saveProfile() {
     setSaving("profile")
@@ -406,6 +440,56 @@ export function SettingsPanel() {
               Amounts are stored in minor units for this currency. Card gateways
               plug into the same payment interface without a second backend.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 border-b border-border pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="size-4 text-primary" />
+                Account security
+              </CardTitle>
+              <CardDescription>
+                Change the password for {user?.email ?? "your account"}. Owner
+                and Team accounts only — invites force a new password on first
+                login.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={!!saving}
+              onClick={() => void savePassword()}
+            >
+              {saving === "password" ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : null}
+              Update password
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-4 pt-4 sm:grid-cols-3">
+            <Field
+              label="Current password"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              type="password"
+              placeholder="••••••••"
+            />
+            <Field
+              label="New password"
+              value={newPassword}
+              onChange={setNewPassword}
+              type="password"
+              placeholder="Min 8 characters"
+            />
+            <Field
+              label="Confirm new password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              type="password"
+              placeholder="Repeat new password"
+            />
           </CardContent>
         </Card>
 
@@ -771,18 +855,20 @@ function Field({
   onChange,
   disabled,
   placeholder,
+  type = "text",
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   disabled?: boolean
   placeholder?: string
+  type?: string
 }) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <input
-        type="text"
+        type={type}
         value={value}
         disabled={disabled}
         placeholder={placeholder}

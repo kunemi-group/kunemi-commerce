@@ -8,14 +8,18 @@ describe('AuthService', () => {
   const jwt = { sign: jest.fn(), verify: jest.fn() };
   const storage = {};
   const tenantProvisioner = { registerTenant: jest.fn() };
-  const mailService = { sendRegistrationVerification: jest.fn() };
+  const mailService = {
+    sendRegistrationVerification: jest.fn(),
+    sendPasswordResetOtp: jest.fn(),
+  };
 
   let service: AuthService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jwt.sign.mockImplementation((_payload: unknown, options?: { expiresIn?: string }) =>
-      options?.expiresIn === '7d' ? 'refresh-token' : 'access-token',
+    jwt.sign.mockImplementation(
+      (_payload: unknown, options?: { expiresIn?: string }) =>
+        options?.expiresIn === '7d' ? 'refresh-token' : 'access-token',
     );
     users.save.mockImplementation(async (user) => user);
     service = new AuthService(
@@ -48,13 +52,17 @@ describe('AuthService', () => {
     expect(users.findOne).toHaveBeenCalledWith({
       where: { email: 'owner@example.com' },
     });
-    expect(result).toEqual(expect.objectContaining({
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-      user: expect.objectContaining({ id: 'user-1', role: 'owner' }),
-    }));
+    expect(result).toEqual(
+      expect.objectContaining({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        user: expect.objectContaining({ id: 'user-1', role: 'owner' }),
+      }),
+    );
     expect(user.refreshTokenHash).not.toBe('refresh-token');
-    await expect(bcrypt.compare('refresh-token', user.refreshTokenHash)).resolves.toBe(true);
+    await expect(
+      bcrypt.compare('refresh-token', user.refreshTokenHash),
+    ).resolves.toBe(true);
     expect(user.refreshTokenExpiresAt).toEqual(expect.any(Date));
   });
 
@@ -71,6 +79,93 @@ describe('AuthService', () => {
     await expect(
       service.login({ email: 'user@example.com', password: 'wrong' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('changes password and clears mustChangePassword', async () => {
+    const user = {
+      id: 'user-1',
+      businessId: 'business-1',
+      email: 'staff@example.com',
+      fullName: 'Staff',
+      role: 'team',
+      passwordHash: await bcrypt.hash('TempPass12', 10),
+      mustChangePassword: true,
+      isEmailVerified: true,
+    };
+    users.findOne.mockResolvedValue(user);
+
+    const result = await service.changePassword(
+      {
+        sub: 'user-1',
+        businessId: 'business-1',
+        role: 'team',
+        email: 'staff@example.com',
+      },
+      { currentPassword: 'TempPass12', newPassword: 'NewSecure99' },
+    );
+
+    expect(user.mustChangePassword).toBe(false);
+    await expect(
+      bcrypt.compare('NewSecure99', user.passwordHash),
+    ).resolves.toBe(true);
+    expect(result.user.mustChangePassword).toBe(false);
+  });
+
+  it('issues password reset OTP only for Workspace Owner/Team accounts', async () => {
+    const staff = {
+      id: 'user-1',
+      businessId: 'business-1',
+      email: 'owner@example.com',
+      fullName: 'Owner',
+      role: 'owner',
+    };
+    users.findOne.mockResolvedValueOnce(staff);
+
+    await expect(
+      service.forgotPassword({ email: 'owner@example.com' }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('reset code'),
+      }),
+    );
+    expect(staff.passwordResetOtp).toHaveLength(6);
+    expect(mailService.sendPasswordResetOtp).toHaveBeenCalled();
+
+    users.findOne.mockResolvedValueOnce({
+      id: 'buyer-1',
+      businessId: null,
+      role: 'user',
+      email: 'buyer@example.com',
+    });
+    await service.forgotPassword({ email: 'buyer@example.com' });
+    expect(mailService.sendPasswordResetOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets password with a valid OTP', async () => {
+    const user = {
+      id: 'user-1',
+      businessId: 'business-1',
+      email: 'owner@example.com',
+      fullName: 'Owner',
+      role: 'owner',
+      passwordHash: await bcrypt.hash('old-password', 10),
+      passwordResetOtp: '123456',
+      passwordResetExpiresAt: new Date(Date.now() + 60_000),
+      mustChangePassword: true,
+    };
+    users.findOne.mockResolvedValue(user);
+
+    await service.resetPassword({
+      email: 'owner@example.com',
+      otp: '123456',
+      newPassword: 'BrandNew88',
+    });
+
+    expect(user.mustChangePassword).toBe(false);
+    expect(user.passwordResetOtp).toBeNull();
+    await expect(bcrypt.compare('BrandNew88', user.passwordHash)).resolves.toBe(
+      true,
+    );
   });
 
   it('enforces the intended role boundary for ShopFlow users', async () => {

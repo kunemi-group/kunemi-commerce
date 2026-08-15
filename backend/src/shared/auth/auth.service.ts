@@ -22,9 +22,24 @@ import {
   RegisterDto,
   VerifyEmailDto,
   ResendOtpDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 
 import { MailService } from '../mail/mail.service';
+import { randomInt } from 'crypto';
+
+function sixDigitOtp() {
+  return randomInt(100000, 1000000).toString();
+}
+
+/** Owner or Team seat on a business (product surface; not buyer/admin). */
+function isWorkspaceBusinessAccount(user: Pick<User, 'businessId' | 'role'>) {
+  return (
+    Boolean(user.businessId) && (user.role === 'owner' || user.role === 'team')
+  );
+}
 
 function slugify(name: string) {
   const base = name
@@ -82,7 +97,7 @@ export class AuthService {
 
     await this.businesses.save(business);
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = sixDigitOtp();
     const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = this.users.create({
@@ -94,6 +109,7 @@ export class AuthService {
       isEmailVerified: false,
       emailVerificationOtp: otp,
       emailVerificationExpiresAt: otpExpiresAt,
+      mustChangePassword: false,
     });
 
     await this.users.save(user);
@@ -123,7 +139,7 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = sixDigitOtp();
     const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     const user = this.users.create({
@@ -135,6 +151,7 @@ export class AuthService {
       isEmailVerified: false,
       emailVerificationOtp: otp,
       emailVerificationExpiresAt: otpExpiresAt,
+      mustChangePassword: false,
     });
     await this.users.save(user);
 
@@ -157,13 +174,25 @@ export class AuthService {
     }
     if (user.isEmailVerified) {
       const tokens = await this.tokenResponse(user);
-      return { message: 'Email address is already verified', verified: true, ...tokens };
+      return {
+        message: 'Email address is already verified',
+        verified: true,
+        ...tokens,
+      };
     }
-    if (!user.emailVerificationOtp || user.emailVerificationOtp !== dto.otp.trim()) {
+    if (
+      !user.emailVerificationOtp ||
+      user.emailVerificationOtp !== dto.otp.trim()
+    ) {
       throw new BadRequestException('Invalid verification OTP code');
     }
-    if (user.emailVerificationExpiresAt && user.emailVerificationExpiresAt < new Date()) {
-      throw new BadRequestException('Verification OTP code has expired. Please request a new code.');
+    if (
+      user.emailVerificationExpiresAt &&
+      user.emailVerificationExpiresAt < new Date()
+    ) {
+      throw new BadRequestException(
+        'Verification OTP code has expired. Please request a new code.',
+      );
     }
 
     user.isEmailVerified = true;
@@ -189,7 +218,7 @@ export class AuthService {
     if (user.isEmailVerified) {
       return { message: 'Email address is already verified' };
     }
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = sixDigitOtp();
     user.emailVerificationOtp = otp;
     user.emailVerificationExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await this.users.save(user);
@@ -200,7 +229,119 @@ export class AuthService {
       otp,
     );
 
-    return { message: 'A new 6-digit verification OTP code has been sent to your email.' };
+    return {
+      message:
+        'A new 6-digit verification OTP code has been sent to your email.',
+    };
+  }
+
+  /**
+   * Change password while signed in.
+   * Required after team invite (mustChangePassword).
+   */
+  async changePassword(authUser: AuthUser, dto: ChangePasswordDto) {
+    const user = await this.users.findOne({ where: { id: authUser.sub } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const next = dto.newPassword.trim();
+    if (next.length < 8) {
+      throw new BadRequestException(
+        'New password must be at least 8 characters',
+      );
+    }
+    if (await bcrypt.compare(next, user.passwordHash)) {
+      throw new BadRequestException(
+        'New password must be different from your current password',
+      );
+    }
+
+    user.passwordHash = await bcrypt.hash(next, 10);
+    user.mustChangePassword = false;
+    user.passwordResetOtp = null;
+    user.passwordResetExpiresAt = null;
+    // Force re-login on other devices by rotating refresh session
+    user.refreshTokenHash = null;
+    user.refreshTokenExpiresAt = null;
+    await this.users.save(user);
+
+    return this.tokenResponse(user);
+  }
+
+  /**
+   * Start Workspace Owner/Team password reset.
+   * Always returns a generic message (no account enumeration).
+   */
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.toLowerCase().trim();
+    const generic = {
+      message:
+        'If an account exists for that email, a reset code has been sent.',
+    };
+
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) return generic;
+
+    // Workspace business accounts only (Owner / Team — not buyers / platform admins)
+    if (!isWorkspaceBusinessAccount(user)) {
+      return generic;
+    }
+
+    const otp = sixDigitOtp();
+    user.passwordResetOtp = otp;
+    user.passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await this.users.save(user);
+
+    void this.mailService.sendPasswordResetOtp(user.email, user.fullName, otp);
+    return generic;
+  }
+
+  /** Complete password reset with OTP (Workspace Owner or Team). */
+  async resetPassword(dto: ResetPasswordDto) {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.users.findOne({ where: { email } });
+    if (!user || !user.passwordResetOtp) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    if (!isWorkspaceBusinessAccount(user)) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    if (user.passwordResetOtp !== dto.otp.trim()) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+    if (
+      user.passwordResetExpiresAt &&
+      user.passwordResetExpiresAt < new Date()
+    ) {
+      throw new BadRequestException(
+        'Reset code has expired. Request a new one.',
+      );
+    }
+
+    const next = dto.newPassword.trim();
+    if (next.length < 8) {
+      throw new BadRequestException(
+        'New password must be at least 8 characters',
+      );
+    }
+
+    user.passwordHash = await bcrypt.hash(next, 10);
+    user.mustChangePassword = false;
+    user.passwordResetOtp = null;
+    user.passwordResetExpiresAt = null;
+    user.refreshTokenHash = null;
+    user.refreshTokenExpiresAt = null;
+    await this.users.save(user);
+
+    return {
+      message: 'Password updated. You can sign in with your new password.',
+    };
   }
 
   async login(dto: LoginDto) {
@@ -218,13 +359,18 @@ export class AuthService {
   }
 
   /**
-   * Business/Seller Login — staff accounts only (owner/manager/sales/ops)
+   * Business/Seller Login — Workspace Owner or Team only (not buyers / platform admins).
    */
   async businessLogin(dto: LoginDto) {
     const result = await this.login(dto);
-    if (result.user.role === 'user' || result.user.role === 'super_admin' || result.user.role === 'admin') {
+    if (
+      result.user.role === 'user' ||
+      result.user.role === 'super_admin' ||
+      result.user.role === 'admin' ||
+      !result.user.businessId
+    ) {
       throw new UnauthorizedException(
-        'Business accounts sign in on Kunemi Workspace',
+        'Use a Kunemi Workspace business account (Owner or Team) to sign in here',
       );
     }
     return result;
@@ -249,9 +395,7 @@ export class AuthService {
   async adminLogin(dto: LoginDto) {
     const result = await this.login(dto);
     if (result.user.role !== 'super_admin' && result.user.role !== 'admin') {
-      throw new UnauthorizedException(
-        'Platform admin credentials required',
-      );
+      throw new UnauthorizedException('Platform admin credentials required');
     }
     return result;
   }
@@ -262,7 +406,12 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.role === 'user' || user.role === 'super_admin' || user.role === 'admin' || !user.businessId) {
+    if (
+      user.role === 'user' ||
+      user.role === 'super_admin' ||
+      user.role === 'admin' ||
+      !user.businessId
+    ) {
       return {
         user: {
           id: user.id,
@@ -270,6 +419,8 @@ export class AuthService {
           fullName: user.fullName,
           role: user.role,
           businessId: null,
+          mustChangePassword: Boolean(user.mustChangePassword),
+          isEmailVerified: Boolean(user.isEmailVerified),
         },
         business: null,
       };
@@ -287,7 +438,9 @@ export class AuthService {
     const enabledPaymentMethods = (() => {
       try {
         const parsed = JSON.parse(business.enabledPaymentMethodsJson || '[]');
-        return Array.isArray(parsed) && parsed.length ? parsed : ['bank_transfer'];
+        return Array.isArray(parsed) && parsed.length
+          ? parsed
+          : ['bank_transfer'];
       } catch {
         return ['bank_transfer'];
       }
@@ -300,6 +453,8 @@ export class AuthService {
         fullName: user.fullName,
         role: user.role,
         businessId: business.id,
+        mustChangePassword: Boolean(user.mustChangePassword),
+        isEmailVerified: Boolean(user.isEmailVerified),
       },
       business: {
         id: business.id,
@@ -349,7 +504,9 @@ export class AuthService {
         store: {
           slug: business.storeSlug,
           enabled: business.storeEnabled,
-          publicPath: business.storeSlug ? `/api/store/${business.storeSlug}` : null,
+          publicPath: business.storeSlug
+            ? `/api/store/${business.storeSlug}`
+            : null,
         },
         branding: {
           brandColor: business.brandColor,
@@ -378,7 +535,9 @@ export class AuthService {
     }
 
     if (user.refreshTokenExpiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token has expired. Please sign in again.');
+      throw new UnauthorizedException(
+        'Refresh token has expired. Please sign in again.',
+      );
     }
 
     const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
@@ -413,7 +572,9 @@ export class AuthService {
     );
 
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    const refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const refreshTokenExpiresAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    );
 
     user.refreshTokenHash = refreshTokenHash;
     user.refreshTokenExpiresAt = refreshTokenExpiresAt;
@@ -429,6 +590,7 @@ export class AuthService {
         role: user.role,
         businessId: user.businessId,
         isEmailVerified: user.isEmailVerified,
+        mustChangePassword: Boolean(user.mustChangePassword),
       },
     };
   }

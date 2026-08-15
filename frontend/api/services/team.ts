@@ -25,8 +25,8 @@ export async function listTeam() {
 export async function inviteMember(payload: {
   email: string
   fullName: string
-  /** Product invites only create Team (API: sales). */
-  role: "sales"
+  /** Product invites only create Team. */
+  role: "team"
   password?: string
 }) {
   try {
