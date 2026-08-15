@@ -9,6 +9,7 @@ import {
   MessageSquare,
   FileText,
   Receipt,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react"
 
@@ -26,15 +27,16 @@ export interface NavGroup {
 }
 
 /**
- * Simplified Workspace IA (Phase A):
- * Home · Inbox · Orders · Products · Money · Deliveries · Quotes · Invoices · Team · Settings
- * Store + Insights land in later phases. AI Agents stay unlisted.
+ * Workspace IA:
+ * Home · Insights · Inbox · Orders · Products · Money · Deliveries · Quotes · Invoices · Team · Settings
+ * Store later (Phase C). AI Agents stay unlisted.
  */
 export const navGroups: NavGroup[] = [
   {
     heading: "Overview",
     items: [
       { label: "Home", icon: LayoutDashboard, href: "/" },
+      { label: "Insights", icon: BarChart3, href: "/insights" },
       { label: "Inbox", icon: MessageSquare, href: "/inbox" },
       { label: "Orders", icon: ShoppingCart, href: "/orders" },
       { label: "Products", icon: Package, href: "/inventory" },
@@ -65,4 +67,9 @@ export function navForUser(opts: { isOwner: boolean }): NavGroup[] {
       items: group.items.filter((item) => !item.ownerOnly || opts.isOwner),
     }))
     .filter((g) => g.items.length > 0)
+}
+
+/** @deprecated Use navForUser — kept so hot reload does not break mid-session. */
+export function navForRole(_role?: string): NavGroup[] {
+  return navForUser({ isOwner: true })
 }

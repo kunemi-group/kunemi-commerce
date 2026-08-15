@@ -18,6 +18,7 @@ const tierLabel: Record<string, string> = {
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const { business, user } = useAuth()
+  // Always include Insights for every staff role (not owner-gated).
   const groups = navForUser({ isOwner: isOwnerRole(user?.role) })
   const name = business?.name ?? "Your business"
   const tier = business?.tier ?? "starter"
@@ -48,9 +49,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 const active =
                   item.href === "/"
                     ? pathname === "/"
-                    : pathname.startsWith(item.href)
+                    : pathname === item.href ||
+                      pathname.startsWith(`${item.href}/`)
                 return (
-                  <li key={item.label}>
+                  <li key={`${item.href}-${item.label}`}>
                     <Link
                       href={item.href}
                       onClick={onNavigate}

@@ -103,13 +103,14 @@ Goal: small-business honest reporting. No vanity leaderboards without attributio
 
 Period: **Today / 7d / 30d / custom**
 
-- [ ] **Money:** gross sales, collected, outstanding (awaiting + under review)
-- [ ] **Orders funnel:** created → paid → shipped → delivered / cancelled / expired
-- [ ] **Top products:** revenue + units (variants)
-- [ ] **Payment health:** claims, verified, rejected, median time-to-verify (if data allows)
-- [ ] **Stock risk:** low stock list (link to Products)
-- [ ] Keep existing 14-day revenue chart; align it to selected period
-- [ ] Currency-aware formatting via business currency
+- [x] **Money:** gross sales, collected, outstanding (awaiting + under review)
+- [x] **Orders funnel:** created → paid → shipped → delivered / cancelled / expired
+- [x] **Top products:** revenue + units (variants)
+- [x] **Payment health:** claims, verified, rejected, median time-to-verify (if data allows)
+- [x] **Stock risk:** low stock list (link to Products)
+- [x] Keep existing 14-day revenue chart; align it to selected period (`/insights` + Home chart days prop)
+- [x] Currency-aware formatting via business currency
+- [x] Nav: **Insights** under Overview (`/insights`)
 
 ### B2 — Explicitly later (do not build in v1)
 
@@ -227,7 +228,7 @@ Do not schedule until A–C are solid:
 - [x] One Home; no `/workspace` product page
 - [x] Owner + Team only in product
 - [x] Seller can run: product → order → pay → ship → track without mocks
-- [ ] Insights answer money + funnel + top products for a period
+- [x] Insights answer money + funnel + top products for a period
 - [ ] Public store link creates the same orders sellers already manage
 - [x] No AI Agents / marketplace noise in primary nav
 
@@ -243,5 +244,6 @@ Do not schedule until A–C are solid:
 | 2026-08-09 | Storefront = single-business checkout into Workspace orders |
 | 2026-08-09 | ShopFlow multi-seller stays out of this list                |
 | 2026-08-15 | Phase A on branch `feat/workspace-phase-a-simplify`         |
+| 2026-08-15 | Phase B1 Insights page + period analytics                   |
 
 Update this file as Workspace product work lands. Keep security, CI, and ShopFlow marketplace in `todo.md`.
