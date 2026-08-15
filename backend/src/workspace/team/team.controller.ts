@@ -26,13 +26,13 @@ export class TeamController {
   }
 
   @Post('invite')
-  @Roles('owner', 'manager')
+  @Roles('owner')
   invite(@Body() body: InviteMemberDto, @CurrentUser() user: AuthUser) {
     return this.team.invite(body, user);
   }
 
   @Patch(':id/role')
-  @Roles('owner', 'manager')
+  @Roles('owner')
   updateRole(
     @Param('id') id: string,
     @Body() body: UpdateMemberRoleDto,
@@ -42,7 +42,7 @@ export class TeamController {
   }
 
   @Delete(':id')
-  @Roles('owner', 'manager')
+  @Roles('owner')
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.team.remove(id, user);
   }

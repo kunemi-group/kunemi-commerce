@@ -17,7 +17,7 @@ export class BusinessesController {
   }
 
   @Patch('me')
-  @Roles('owner', 'manager')
+  @Roles('owner')
   updateMe(@CurrentUser() user: AuthUser, @Body() body: UpdateBusinessDto) {
     return this.businesses.updateMe(user, body);
   }

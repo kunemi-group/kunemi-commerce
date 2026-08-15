@@ -288,7 +288,9 @@ export const aiAgents: AiAgent[] = [
   },
 ]
 
-export function aiAgentsAllowedForTier(tier: SubscriptionTier = business.tier): number {
+export function aiAgentsAllowedForTier(
+  tier: SubscriptionTier = business.tier,
+): number {
   return tierLimits[tier].aiAgents
 }
 
@@ -317,41 +319,308 @@ export interface Order {
 }
 
 export const recentOrders: Order[] = [
-  { id: "#A3C9", customer: "Amaka Obi", agent: "Tunde B.", items: 2, total: "₦15,000", status: "paid", payment: "card", placed: "2m ago", phone: "+2348011110001", email: "amaka.o@example.com" },
-  { id: "#A3C2", customer: "Chidi N.", agent: "Amaka O.", items: 1, total: "₦8,500", status: "pending", payment: "manual_transfer", placed: "14m ago", holdMinutesLeft: 16, phone: "+2348022220002", email: "chidi@example.com" },
-  { id: "#A3B8", customer: "Bisi A.", agent: "Ngozi E.", items: 4, total: "₦32,400", status: "shipped", payment: "card", placed: "1h ago", phone: "+2348033330003", email: "bisi@example.com" },
-  { id: "#A3B1", customer: "Emeka U.", agent: "Kola A.", items: 3, total: "₦21,750", status: "delivered", payment: "card", placed: "3h ago", phone: "+2348044440004" },
-  { id: "#A3A7", customer: "Zainab M.", agent: "Fatima S.", items: 1, total: "₦6,200", status: "cancelled", payment: "manual_transfer", placed: "5h ago", phone: "+2348055550005", email: "zainab@example.com" },
-  { id: "#A3A0", customer: "Femi O.", agent: "Tunde B.", items: 2, total: "₦18,900", status: "paid", payment: "card", placed: "6h ago", phone: "+2348066660006" },
-  { id: "#A39C", customer: "Grace I.", agent: "Amaka O.", items: 5, total: "₦44,100", status: "delivered", payment: "card", placed: "8h ago", phone: "+2348077770007", email: "grace@mail.com" },
+  {
+    id: "#A3C9",
+    customer: "Amaka Obi",
+    agent: "Tunde B.",
+    items: 2,
+    total: "₦15,000",
+    status: "paid",
+    payment: "card",
+    placed: "2m ago",
+    phone: "+2348011110001",
+    email: "amaka.o@example.com",
+  },
+  {
+    id: "#A3C2",
+    customer: "Chidi N.",
+    agent: "Amaka O.",
+    items: 1,
+    total: "₦8,500",
+    status: "pending",
+    payment: "manual_transfer",
+    placed: "14m ago",
+    holdMinutesLeft: 16,
+    phone: "+2348022220002",
+    email: "chidi@example.com",
+  },
+  {
+    id: "#A3B8",
+    customer: "Bisi A.",
+    agent: "Ngozi E.",
+    items: 4,
+    total: "₦32,400",
+    status: "shipped",
+    payment: "card",
+    placed: "1h ago",
+    phone: "+2348033330003",
+    email: "bisi@example.com",
+  },
+  {
+    id: "#A3B1",
+    customer: "Emeka U.",
+    agent: "Kola A.",
+    items: 3,
+    total: "₦21,750",
+    status: "delivered",
+    payment: "card",
+    placed: "3h ago",
+    phone: "+2348044440004",
+  },
+  {
+    id: "#A3A7",
+    customer: "Zainab M.",
+    agent: "Fatima S.",
+    items: 1,
+    total: "₦6,200",
+    status: "cancelled",
+    payment: "manual_transfer",
+    placed: "5h ago",
+    phone: "+2348055550005",
+    email: "zainab@example.com",
+  },
+  {
+    id: "#A3A0",
+    customer: "Femi O.",
+    agent: "Tunde B.",
+    items: 2,
+    total: "₦18,900",
+    status: "paid",
+    payment: "card",
+    placed: "6h ago",
+    phone: "+2348066660006",
+  },
+  {
+    id: "#A39C",
+    customer: "Grace I.",
+    agent: "Amaka O.",
+    items: 5,
+    total: "₦44,100",
+    status: "delivered",
+    payment: "card",
+    placed: "8h ago",
+    phone: "+2348077770007",
+    email: "grace@mail.com",
+  },
 ]
 
 // Larger order book used by the dedicated Orders page
 export const allOrders: Order[] = [
-  { id: "#A3C9", customer: "Amaka Obi", agent: "Tunde B.", items: 2, total: "₦15,000", status: "paid", payment: "card", placed: "2m ago", phone: "+2348011110001" },
-  { id: "#A3C2", customer: "Chidi Nwosu", agent: "Amaka O.", items: 1, total: "₦8,500", status: "pending", payment: "manual_transfer", placed: "14m ago", holdMinutesLeft: 16, phone: "+2348022220002" },
-  { id: "#A3B8", customer: "Bisi Adewale", agent: "Ngozi E.", items: 4, total: "₦32,400", status: "shipped", payment: "card", placed: "1h ago", phone: "+2348033330003" },
-  { id: "#A3B1", customer: "Emeka Umeh", agent: "Kola A.", items: 3, total: "₦21,750", status: "delivered", payment: "card", placed: "3h ago", phone: "+2348044440004" },
-  { id: "#A3A7", customer: "Zainab Musa", agent: "Fatima S.", items: 1, total: "₦6,200", status: "cancelled", payment: "manual_transfer", placed: "5h ago", phone: "+2348055550005" },
-  { id: "#A3A0", customer: "Femi Okafor", agent: "Tunde B.", items: 2, total: "₦18,900", status: "paid", payment: "card", placed: "6h ago", phone: "+2348066660006" },
-  { id: "#A39C", customer: "Grace Ibe", agent: "Amaka O.", items: 5, total: "₦44,100", status: "delivered", payment: "card", placed: "8h ago", phone: "+2348077770007" },
-  { id: "#A398", customer: "Kunle Bakare", agent: "Ngozi E.", items: 2, total: "₦12,300", status: "pending", payment: "manual_transfer", placed: "9h ago", holdMinutesLeft: 21, phone: "+2348088880008" },
-  { id: "#A392", customer: "Halima Yusuf", agent: "Kola A.", items: 1, total: "₦5,400", status: "expired", payment: "manual_transfer", placed: "11h ago", phone: "+2348099990009" },
-  { id: "#A38D", customer: "Tobi Coker", agent: "Fatima S.", items: 6, total: "₦58,200", status: "shipped", payment: "card", placed: "13h ago", phone: "+2348010100010" },
-  { id: "#A386", customer: "Ada Eze", agent: "Tunde B.", items: 3, total: "₦27,600", status: "paid", payment: "card", placed: "15h ago", phone: "+2348012120012" },
-  { id: "#A381", customer: "Sola Martins", agent: "Amaka O.", items: 2, total: "₦16,750", status: "delivered", payment: "manual_transfer", placed: "18h ago", phone: "+2348013130013" },
-  { id: "#A37C", customer: "Ifeanyi Obi", agent: "Ngozi E.", items: 1, total: "₦9,900", status: "cancelled", payment: "card", placed: "20h ago", phone: "+2348014140014" },
-  { id: "#A378", customer: "Maryam Bello", agent: "Kola A.", items: 4, total: "₦34,800", status: "delivered", payment: "card", placed: "22h ago", phone: "+2348015150015" },
-  { id: "#A374", customer: "Daniel Effiong", agent: "Fatima S.", items: 2, total: "₦19,250", status: "pending", payment: "manual_transfer", placed: "1d ago", holdMinutesLeft: 8, phone: "+2348016160016" },
-  { id: "#A36F", customer: "Patience Udo", agent: "Tunde B.", items: 3, total: "₦23,400", status: "shipped", payment: "card", placed: "1d ago", phone: "+2348017170017" },
+  {
+    id: "#A3C9",
+    customer: "Amaka Obi",
+    agent: "Tunde B.",
+    items: 2,
+    total: "₦15,000",
+    status: "paid",
+    payment: "card",
+    placed: "2m ago",
+    phone: "+2348011110001",
+  },
+  {
+    id: "#A3C2",
+    customer: "Chidi Nwosu",
+    agent: "Amaka O.",
+    items: 1,
+    total: "₦8,500",
+    status: "pending",
+    payment: "manual_transfer",
+    placed: "14m ago",
+    holdMinutesLeft: 16,
+    phone: "+2348022220002",
+  },
+  {
+    id: "#A3B8",
+    customer: "Bisi Adewale",
+    agent: "Ngozi E.",
+    items: 4,
+    total: "₦32,400",
+    status: "shipped",
+    payment: "card",
+    placed: "1h ago",
+    phone: "+2348033330003",
+  },
+  {
+    id: "#A3B1",
+    customer: "Emeka Umeh",
+    agent: "Kola A.",
+    items: 3,
+    total: "₦21,750",
+    status: "delivered",
+    payment: "card",
+    placed: "3h ago",
+    phone: "+2348044440004",
+  },
+  {
+    id: "#A3A7",
+    customer: "Zainab Musa",
+    agent: "Fatima S.",
+    items: 1,
+    total: "₦6,200",
+    status: "cancelled",
+    payment: "manual_transfer",
+    placed: "5h ago",
+    phone: "+2348055550005",
+  },
+  {
+    id: "#A3A0",
+    customer: "Femi Okafor",
+    agent: "Tunde B.",
+    items: 2,
+    total: "₦18,900",
+    status: "paid",
+    payment: "card",
+    placed: "6h ago",
+    phone: "+2348066660006",
+  },
+  {
+    id: "#A39C",
+    customer: "Grace Ibe",
+    agent: "Amaka O.",
+    items: 5,
+    total: "₦44,100",
+    status: "delivered",
+    payment: "card",
+    placed: "8h ago",
+    phone: "+2348077770007",
+  },
+  {
+    id: "#A398",
+    customer: "Kunle Bakare",
+    agent: "Ngozi E.",
+    items: 2,
+    total: "₦12,300",
+    status: "pending",
+    payment: "manual_transfer",
+    placed: "9h ago",
+    holdMinutesLeft: 21,
+    phone: "+2348088880008",
+  },
+  {
+    id: "#A392",
+    customer: "Halima Yusuf",
+    agent: "Kola A.",
+    items: 1,
+    total: "₦5,400",
+    status: "expired",
+    payment: "manual_transfer",
+    placed: "11h ago",
+    phone: "+2348099990009",
+  },
+  {
+    id: "#A38D",
+    customer: "Tobi Coker",
+    agent: "Fatima S.",
+    items: 6,
+    total: "₦58,200",
+    status: "shipped",
+    payment: "card",
+    placed: "13h ago",
+    phone: "+2348010100010",
+  },
+  {
+    id: "#A386",
+    customer: "Ada Eze",
+    agent: "Tunde B.",
+    items: 3,
+    total: "₦27,600",
+    status: "paid",
+    payment: "card",
+    placed: "15h ago",
+    phone: "+2348012120012",
+  },
+  {
+    id: "#A381",
+    customer: "Sola Martins",
+    agent: "Amaka O.",
+    items: 2,
+    total: "₦16,750",
+    status: "delivered",
+    payment: "manual_transfer",
+    placed: "18h ago",
+    phone: "+2348013130013",
+  },
+  {
+    id: "#A37C",
+    customer: "Ifeanyi Obi",
+    agent: "Ngozi E.",
+    items: 1,
+    total: "₦9,900",
+    status: "cancelled",
+    payment: "card",
+    placed: "20h ago",
+    phone: "+2348014140014",
+  },
+  {
+    id: "#A378",
+    customer: "Maryam Bello",
+    agent: "Kola A.",
+    items: 4,
+    total: "₦34,800",
+    status: "delivered",
+    payment: "card",
+    placed: "22h ago",
+    phone: "+2348015150015",
+  },
+  {
+    id: "#A374",
+    customer: "Daniel Effiong",
+    agent: "Fatima S.",
+    items: 2,
+    total: "₦19,250",
+    status: "pending",
+    payment: "manual_transfer",
+    placed: "1d ago",
+    holdMinutesLeft: 8,
+    phone: "+2348016160016",
+  },
+  {
+    id: "#A36F",
+    customer: "Patience Udo",
+    agent: "Tunde B.",
+    items: 3,
+    total: "₦23,400",
+    status: "shipped",
+    payment: "card",
+    placed: "1d ago",
+    phone: "+2348017170017",
+  },
 ]
 
 // KPI tiles specific to the Orders page
 export const orderKpis: Kpi[] = [
-  { id: "total", label: "Total orders", value: "1,284", delta: "+8.1%", trend: "up", helper: "last 30 days" },
-  { id: "pending", label: "Awaiting payment", value: "86", delta: "+5", trend: "up", helper: "needs follow-up" },
-  { id: "fulfillment", label: "Fulfillment rate", value: "94.2%", delta: "+1.8%", trend: "up", helper: "shipped on time" },
-  { id: "cancelled", label: "Cancelled / expired", value: "127", delta: "-2.3%", trend: "down", helper: "abandoned or voided" },
+  {
+    id: "total",
+    label: "Total orders",
+    value: "1,284",
+    delta: "+8.1%",
+    trend: "up",
+    helper: "last 30 days",
+  },
+  {
+    id: "pending",
+    label: "Awaiting payment",
+    value: "86",
+    delta: "+5",
+    trend: "up",
+    helper: "needs follow-up",
+  },
+  {
+    id: "fulfillment",
+    label: "Fulfillment rate",
+    value: "94.2%",
+    delta: "+1.8%",
+    trend: "up",
+    helper: "shipped on time",
+  },
+  {
+    id: "cancelled",
+    label: "Cancelled / expired",
+    value: "127",
+    delta: "-2.3%",
+    trend: "down",
+    helper: "abandoned or voided",
+  },
 ]
 
 export interface LowStockItem {
@@ -365,10 +634,42 @@ export interface LowStockItem {
 }
 
 export const lowStock: LowStockItem[] = [
-  { id: "1", product: "Ankara Maxi Dress", variant: "M / Red", sku: "AMX-M-RED", onHand: 3, reserved: 2, threshold: 5 },
-  { id: "2", product: "Linen Shirt", variant: "L / White", sku: "LIN-L-WHT", onHand: 4, reserved: 1, threshold: 6 },
-  { id: "3", product: "Leather Tote", variant: "Tan", sku: "LTR-TOT-TAN", onHand: 2, reserved: 0, threshold: 4 },
-  { id: "4", product: "Denim Jacket", variant: "S / Blue", sku: "DNM-S-BLU", onHand: 1, reserved: 1, threshold: 5 },
+  {
+    id: "1",
+    product: "Ankara Maxi Dress",
+    variant: "M / Red",
+    sku: "AMX-M-RED",
+    onHand: 3,
+    reserved: 2,
+    threshold: 5,
+  },
+  {
+    id: "2",
+    product: "Linen Shirt",
+    variant: "L / White",
+    sku: "LIN-L-WHT",
+    onHand: 4,
+    reserved: 1,
+    threshold: 6,
+  },
+  {
+    id: "3",
+    product: "Leather Tote",
+    variant: "Tan",
+    sku: "LTR-TOT-TAN",
+    onHand: 2,
+    reserved: 0,
+    threshold: 4,
+  },
+  {
+    id: "4",
+    product: "Denim Jacket",
+    variant: "S / Blue",
+    sku: "DNM-S-BLU",
+    onHand: 1,
+    reserved: 1,
+    threshold: 5,
+  },
 ]
 
 // ── Inventory (product variants) ────────────────────────────────────────────
@@ -388,30 +689,181 @@ export interface InventoryItem {
 }
 
 export const inventory: InventoryItem[] = [
-  { id: "1", product: "Ankara Maxi Dress", variant: "M / Red", sku: "AMX-M-RED", price: "₦18,500", onHand: 3, reserved: 2, threshold: 5, category: "Dresses" },
-  { id: "2", product: "Ankara Maxi Dress", variant: "L / Blue", sku: "AMX-L-BLU", price: "₦18,500", onHand: 14, reserved: 3, threshold: 5, category: "Dresses" },
-  { id: "3", product: "Linen Shirt", variant: "L / White", sku: "LIN-L-WHT", price: "₦12,000", onHand: 4, reserved: 1, threshold: 6, category: "Tops" },
-  { id: "4", product: "Linen Shirt", variant: "M / Olive", sku: "LIN-M-OLV", price: "₦12,000", onHand: 22, reserved: 4, threshold: 6, category: "Tops" },
-  { id: "5", product: "Leather Tote", variant: "Tan", sku: "LTR-TOT-TAN", price: "₦32,000", onHand: 2, reserved: 0, threshold: 4, category: "Bags" },
-  { id: "6", product: "Leather Tote", variant: "Black", sku: "LTR-TOT-BLK", price: "₦32,000", onHand: 9, reserved: 2, threshold: 4, category: "Bags" },
-  { id: "7", product: "Denim Jacket", variant: "S / Blue", sku: "DNM-S-BLU", price: "₦24,500", onHand: 1, reserved: 1, threshold: 5, category: "Outerwear" },
-  { id: "8", product: "Denim Jacket", variant: "M / Blue", sku: "DNM-M-BLU", price: "₦24,500", onHand: 11, reserved: 0, threshold: 5, category: "Outerwear" },
-  { id: "9", product: "Adire Wrap Skirt", variant: "Free / Indigo", sku: "ADR-WRP-IND", price: "₦15,800", onHand: 18, reserved: 5, threshold: 8, category: "Bottoms" },
-  { id: "10", product: "Cotton Tee Pack", variant: "M / 3-pack", sku: "CTN-TEE-M3", price: "₦9,500", onHand: 40, reserved: 6, threshold: 12, category: "Tops" },
-  { id: "11", product: "Beaded Clutch", variant: "Gold", sku: "BD-CLT-GLD", price: "₦14,200", onHand: 7, reserved: 1, threshold: 4, category: "Bags", taxExempt: true },
-  { id: "12", product: "Kente Scarf", variant: "One size", sku: "KNT-SCF-01", price: "₦8,000", onHand: 25, reserved: 0, threshold: 10, category: "Accessories", taxExempt: true },
+  {
+    id: "1",
+    product: "Ankara Maxi Dress",
+    variant: "M / Red",
+    sku: "AMX-M-RED",
+    price: "₦18,500",
+    onHand: 3,
+    reserved: 2,
+    threshold: 5,
+    category: "Dresses",
+  },
+  {
+    id: "2",
+    product: "Ankara Maxi Dress",
+    variant: "L / Blue",
+    sku: "AMX-L-BLU",
+    price: "₦18,500",
+    onHand: 14,
+    reserved: 3,
+    threshold: 5,
+    category: "Dresses",
+  },
+  {
+    id: "3",
+    product: "Linen Shirt",
+    variant: "L / White",
+    sku: "LIN-L-WHT",
+    price: "₦12,000",
+    onHand: 4,
+    reserved: 1,
+    threshold: 6,
+    category: "Tops",
+  },
+  {
+    id: "4",
+    product: "Linen Shirt",
+    variant: "M / Olive",
+    sku: "LIN-M-OLV",
+    price: "₦12,000",
+    onHand: 22,
+    reserved: 4,
+    threshold: 6,
+    category: "Tops",
+  },
+  {
+    id: "5",
+    product: "Leather Tote",
+    variant: "Tan",
+    sku: "LTR-TOT-TAN",
+    price: "₦32,000",
+    onHand: 2,
+    reserved: 0,
+    threshold: 4,
+    category: "Bags",
+  },
+  {
+    id: "6",
+    product: "Leather Tote",
+    variant: "Black",
+    sku: "LTR-TOT-BLK",
+    price: "₦32,000",
+    onHand: 9,
+    reserved: 2,
+    threshold: 4,
+    category: "Bags",
+  },
+  {
+    id: "7",
+    product: "Denim Jacket",
+    variant: "S / Blue",
+    sku: "DNM-S-BLU",
+    price: "₦24,500",
+    onHand: 1,
+    reserved: 1,
+    threshold: 5,
+    category: "Outerwear",
+  },
+  {
+    id: "8",
+    product: "Denim Jacket",
+    variant: "M / Blue",
+    sku: "DNM-M-BLU",
+    price: "₦24,500",
+    onHand: 11,
+    reserved: 0,
+    threshold: 5,
+    category: "Outerwear",
+  },
+  {
+    id: "9",
+    product: "Adire Wrap Skirt",
+    variant: "Free / Indigo",
+    sku: "ADR-WRP-IND",
+    price: "₦15,800",
+    onHand: 18,
+    reserved: 5,
+    threshold: 8,
+    category: "Bottoms",
+  },
+  {
+    id: "10",
+    product: "Cotton Tee Pack",
+    variant: "M / 3-pack",
+    sku: "CTN-TEE-M3",
+    price: "₦9,500",
+    onHand: 40,
+    reserved: 6,
+    threshold: 12,
+    category: "Tops",
+  },
+  {
+    id: "11",
+    product: "Beaded Clutch",
+    variant: "Gold",
+    sku: "BD-CLT-GLD",
+    price: "₦14,200",
+    onHand: 7,
+    reserved: 1,
+    threshold: 4,
+    category: "Bags",
+    taxExempt: true,
+  },
+  {
+    id: "12",
+    product: "Kente Scarf",
+    variant: "One size",
+    sku: "KNT-SCF-01",
+    price: "₦8,000",
+    onHand: 25,
+    reserved: 0,
+    threshold: 10,
+    category: "Accessories",
+    taxExempt: true,
+  },
 ]
 
 export const inventoryKpis: Kpi[] = [
-  { id: "skus", label: "Active SKUs", value: "12", delta: "+2", trend: "up", helper: "variants in catalog" },
-  { id: "onhand", label: "Units on hand", value: "156", delta: "-8", trend: "down", helper: "physical stock" },
-  { id: "reserved", label: "Reserved (holds)", value: "25", delta: "+6", trend: "up", helper: "pending payment windows" },
-  { id: "low", label: "Low stock SKUs", value: "4", delta: "+1", trend: "up", helper: "at or below threshold" },
+  {
+    id: "skus",
+    label: "Active SKUs",
+    value: "12",
+    delta: "+2",
+    trend: "up",
+    helper: "variants in catalog",
+  },
+  {
+    id: "onhand",
+    label: "Units on hand",
+    value: "156",
+    delta: "-8",
+    trend: "down",
+    helper: "physical stock",
+  },
+  {
+    id: "reserved",
+    label: "Reserved (holds)",
+    value: "25",
+    delta: "+6",
+    trend: "up",
+    helper: "pending payment windows",
+  },
+  {
+    id: "low",
+    label: "Low stock SKUs",
+    value: "4",
+    delta: "+1",
+    trend: "up",
+    helper: "at or below threshold",
+  },
 ]
 
 // ── Payments ────────────────────────────────────────────────────────────────
 
-export type PaymentStatus = "awaiting_payment" | "under_review" | "confirmed" | "failed"
+export type PaymentStatus =
+  "awaiting_payment" | "under_review" | "confirmed" | "failed"
 export type PaymentMethod = "card" | "manual_transfer"
 
 export interface Payment {
@@ -428,34 +880,167 @@ export interface Payment {
 }
 
 export const payments: Payment[] = [
-  { id: "pay_91", orderId: "#A3C2", customer: "Chidi Nwosu", agent: "Amaka O.", method: "manual_transfer", amount: "₦8,500", status: "under_review", proofLabel: "transfer_chidi.jpg", updated: "4m ago" },
-  { id: "pay_90", orderId: "#A398", customer: "Kunle Bakare", agent: "Ngozi E.", method: "manual_transfer", amount: "₦12,300", status: "under_review", proofLabel: "gtb_receipt.png", updated: "18m ago" },
-  { id: "pay_89", orderId: "#A374", customer: "Daniel Effiong", agent: "Fatima S.", method: "manual_transfer", amount: "₦19,250", status: "under_review", proofLabel: "uba_shot.jpg", updated: "1h ago" },
-  { id: "pay_88", orderId: "#A3C9", customer: "Amaka Obi", agent: "Tunde B.", method: "card", amount: "₦15,000", status: "confirmed", reference: "PSK-8821", updated: "2m ago" },
-  { id: "pay_87", orderId: "#A386", customer: "Ada Eze", agent: "Tunde B.", method: "card", amount: "₦27,600", status: "confirmed", reference: "PSK-8790", updated: "15h ago" },
-  { id: "pay_86", orderId: "#A3A0", customer: "Femi Okafor", agent: "Tunde B.", method: "card", amount: "₦18,900", status: "confirmed", reference: "PSK-8744", updated: "6h ago" },
-  { id: "pay_85", orderId: "#A392", customer: "Halima Yusuf", agent: "Kola A.", method: "manual_transfer", amount: "₦5,400", status: "failed", proofLabel: "blurry_shot.jpg", updated: "11h ago" },
-  { id: "pay_84", orderId: "#A381", customer: "Sola Martins", agent: "Amaka O.", method: "manual_transfer", amount: "₦16,750", status: "confirmed", proofLabel: "zenith_ok.pdf", updated: "18h ago" },
-  { id: "pay_83", orderId: "#A3B1", customer: "Emeka Umeh", agent: "Kola A.", method: "card", amount: "₦21,750", status: "confirmed", reference: "PSK-8701", updated: "3h ago" },
-  { id: "pay_82", orderId: "#A370", customer: "Ruth Okon", agent: "Ngozi E.", method: "card", amount: "₦11,200", status: "awaiting_payment", reference: "PSK-pending", updated: "25m ago" },
-  { id: "pay_81", orderId: "#A36C", customer: "Ibrahim Lawal", agent: "Fatima S.", method: "manual_transfer", amount: "₦22,000", status: "awaiting_payment", updated: "40m ago" },
+  {
+    id: "pay_91",
+    orderId: "#A3C2",
+    customer: "Chidi Nwosu",
+    agent: "Amaka O.",
+    method: "manual_transfer",
+    amount: "₦8,500",
+    status: "under_review",
+    proofLabel: "transfer_chidi.jpg",
+    updated: "4m ago",
+  },
+  {
+    id: "pay_90",
+    orderId: "#A398",
+    customer: "Kunle Bakare",
+    agent: "Ngozi E.",
+    method: "manual_transfer",
+    amount: "₦12,300",
+    status: "under_review",
+    proofLabel: "gtb_receipt.png",
+    updated: "18m ago",
+  },
+  {
+    id: "pay_89",
+    orderId: "#A374",
+    customer: "Daniel Effiong",
+    agent: "Fatima S.",
+    method: "manual_transfer",
+    amount: "₦19,250",
+    status: "under_review",
+    proofLabel: "uba_shot.jpg",
+    updated: "1h ago",
+  },
+  {
+    id: "pay_88",
+    orderId: "#A3C9",
+    customer: "Amaka Obi",
+    agent: "Tunde B.",
+    method: "card",
+    amount: "₦15,000",
+    status: "confirmed",
+    reference: "PSK-8821",
+    updated: "2m ago",
+  },
+  {
+    id: "pay_87",
+    orderId: "#A386",
+    customer: "Ada Eze",
+    agent: "Tunde B.",
+    method: "card",
+    amount: "₦27,600",
+    status: "confirmed",
+    reference: "PSK-8790",
+    updated: "15h ago",
+  },
+  {
+    id: "pay_86",
+    orderId: "#A3A0",
+    customer: "Femi Okafor",
+    agent: "Tunde B.",
+    method: "card",
+    amount: "₦18,900",
+    status: "confirmed",
+    reference: "PSK-8744",
+    updated: "6h ago",
+  },
+  {
+    id: "pay_85",
+    orderId: "#A392",
+    customer: "Halima Yusuf",
+    agent: "Kola A.",
+    method: "manual_transfer",
+    amount: "₦5,400",
+    status: "failed",
+    proofLabel: "blurry_shot.jpg",
+    updated: "11h ago",
+  },
+  {
+    id: "pay_84",
+    orderId: "#A381",
+    customer: "Sola Martins",
+    agent: "Amaka O.",
+    method: "manual_transfer",
+    amount: "₦16,750",
+    status: "confirmed",
+    proofLabel: "zenith_ok.pdf",
+    updated: "18h ago",
+  },
+  {
+    id: "pay_83",
+    orderId: "#A3B1",
+    customer: "Emeka Umeh",
+    agent: "Kola A.",
+    method: "card",
+    amount: "₦21,750",
+    status: "confirmed",
+    reference: "PSK-8701",
+    updated: "3h ago",
+  },
+  {
+    id: "pay_82",
+    orderId: "#A370",
+    customer: "Ruth Okon",
+    agent: "Ngozi E.",
+    method: "card",
+    amount: "₦11,200",
+    status: "awaiting_payment",
+    reference: "PSK-pending",
+    updated: "25m ago",
+  },
+  {
+    id: "pay_81",
+    orderId: "#A36C",
+    customer: "Ibrahim Lawal",
+    agent: "Fatima S.",
+    method: "manual_transfer",
+    amount: "₦22,000",
+    status: "awaiting_payment",
+    updated: "40m ago",
+  },
 ]
 
 export const paymentKpis: Kpi[] = [
-  { id: "collected", label: "Collected (30d)", value: "₦18.4M", delta: "+12.6%", trend: "up", helper: "confirmed payments" },
-  { id: "review", label: "Under review", value: "3", delta: "+2", trend: "up", helper: "manual transfers waiting" },
-  { id: "awaiting", label: "Awaiting payment", value: "86", delta: "+5", trend: "up", helper: "open payment links" },
-  { id: "failed", label: "Failed / rejected", value: "14", delta: "-3", trend: "down", helper: "last 30 days" },
+  {
+    id: "collected",
+    label: "Collected (30d)",
+    value: "₦18.4M",
+    delta: "+12.6%",
+    trend: "up",
+    helper: "confirmed payments",
+  },
+  {
+    id: "review",
+    label: "Under review",
+    value: "3",
+    delta: "+2",
+    trend: "up",
+    helper: "manual transfers waiting",
+  },
+  {
+    id: "awaiting",
+    label: "Awaiting payment",
+    value: "86",
+    delta: "+5",
+    trend: "up",
+    helper: "open payment links",
+  },
+  {
+    id: "failed",
+    label: "Failed / rejected",
+    value: "14",
+    delta: "-3",
+    trend: "down",
+    helper: "last 30 days",
+  },
 ]
 
 // ── Deliveries ──────────────────────────────────────────────────────────────
 
 export type DeliveryStatus =
-  | "awaiting_pickup"
-  | "picked_up"
-  | "out_for_delivery"
-  | "delivered"
-  | "failed"
+  "awaiting_pickup" | "picked_up" | "out_for_delivery" | "delivered" | "failed"
 
 export type FulfillmentMode = "manual" | "api_integrated"
 
@@ -565,10 +1150,38 @@ export const deliveries: Delivery[] = [
 ]
 
 export const deliveryKpis: Kpi[] = [
-  { id: "transit", label: "In transit", value: "3", delta: "+1", trend: "up", helper: "picked up or out for delivery" },
-  { id: "pickup", label: "Awaiting pickup", value: "1", delta: "0", trend: "down", helper: "ready to hand off" },
-  { id: "delivered", label: "Delivered (7d)", value: "48", delta: "+9%", trend: "up", helper: "successful handovers" },
-  { id: "manual", label: "Manual share", value: "58%", delta: "-4%", trend: "down", helper: "vs API-integrated" },
+  {
+    id: "transit",
+    label: "In transit",
+    value: "3",
+    delta: "+1",
+    trend: "up",
+    helper: "picked up or out for delivery",
+  },
+  {
+    id: "pickup",
+    label: "Awaiting pickup",
+    value: "1",
+    delta: "0",
+    trend: "down",
+    helper: "ready to hand off",
+  },
+  {
+    id: "delivered",
+    label: "Delivered (7d)",
+    value: "48",
+    delta: "+9%",
+    trend: "up",
+    helper: "successful handovers",
+  },
+  {
+    id: "manual",
+    label: "Manual share",
+    value: "58%",
+    delta: "-4%",
+    trend: "down",
+    helper: "vs API-integrated",
+  },
 ]
 
 // Sample public tracking payload (customer-facing page)
@@ -614,10 +1227,38 @@ export const trackingByToken: Record<
 }
 
 export const teamKpis: Kpi[] = [
-  { id: "team", label: "Team seats", value: "5", delta: "+1", trend: "up", helper: "including owner" },
-  { id: "conversion", label: "Team chat → paid", value: "62.4%", delta: "+3.2%", trend: "up", helper: "last 30 days" },
-  { id: "open", label: "Open chats", value: "18", delta: "-3", trend: "down", helper: "across the floor now" },
-  { id: "top", label: "Top closer", value: "Amaka O.", delta: "71%", trend: "up", helper: "conversion rate" },
+  {
+    id: "team",
+    label: "Team seats",
+    value: "5",
+    delta: "+1",
+    trend: "up",
+    helper: "including owner",
+  },
+  {
+    id: "conversion",
+    label: "Team chat → paid",
+    value: "62.4%",
+    delta: "+3.2%",
+    trend: "up",
+    helper: "last 30 days",
+  },
+  {
+    id: "open",
+    label: "Open chats",
+    value: "18",
+    delta: "-3",
+    trend: "down",
+    helper: "across the floor now",
+  },
+  {
+    id: "top",
+    label: "Top closer",
+    value: "Amaka O.",
+    delta: "71%",
+    trend: "up",
+    helper: "conversion rate",
+  },
 ]
 
 /** @deprecated use teamKpis */
@@ -660,8 +1301,10 @@ export const aiAgentKpis: Kpi[] = [
 
 // ── Quotations & invoices ───────────────────────────────────────────────────
 
-export type QuoteStatus = "draft" | "sent" | "accepted" | "expired" | "converted"
-export type InvoiceStatus = "draft" | "sent" | "partial" | "paid" | "overdue" | "void"
+export type QuoteStatus =
+  "draft" | "sent" | "accepted" | "expired" | "converted"
+export type InvoiceStatus =
+  "draft" | "sent" | "partial" | "paid" | "overdue" | "void"
 
 export interface QuoteLine {
   name: string
@@ -737,7 +1380,12 @@ export const quotations: Quotation[] = [
       { name: "Ankara Maxi Dress · S / Red", qty: 2, unitPrice: "₦18,500" },
       { name: "Ankara Maxi Dress · M / Red", qty: 3, unitPrice: "₦18,500" },
       { name: "Ankara Maxi Dress · L / Blue", qty: 3, unitPrice: "₦18,500" },
-      { name: "Kente Scarf · One size", qty: 5, unitPrice: "₦8,000", taxExempt: true },
+      {
+        name: "Kente Scarf · One size",
+        qty: 5,
+        unitPrice: "₦8,000",
+        taxExempt: true,
+      },
       { name: "Linen Shirt · M / White", qty: 4, unitPrice: "₦12,000" },
       { name: "Linen Shirt · L / Olive", qty: 4, unitPrice: "₦12,000" },
       { name: "Leather Tote · Tan", qty: 2, unitPrice: "₦32,000" },
@@ -748,21 +1396,57 @@ export const quotations: Quotation[] = [
       { name: "Cotton Tee Pack · S", qty: 6, unitPrice: "₦9,500" },
       { name: "Cotton Tee Pack · M", qty: 8, unitPrice: "₦9,500" },
       { name: "Cotton Tee Pack · L", qty: 6, unitPrice: "₦9,500" },
-      { name: "Beaded Clutch · Gold", qty: 2, unitPrice: "₦14,200", taxExempt: true },
-      { name: "Beaded Clutch · Silver", qty: 2, unitPrice: "₦14,200", taxExempt: true },
-      { name: "Ankara Headwrap · Assorted", qty: 10, unitPrice: "₦3,500", taxExempt: true },
+      {
+        name: "Beaded Clutch · Gold",
+        qty: 2,
+        unitPrice: "₦14,200",
+        taxExempt: true,
+      },
+      {
+        name: "Beaded Clutch · Silver",
+        qty: 2,
+        unitPrice: "₦14,200",
+        taxExempt: true,
+      },
+      {
+        name: "Ankara Headwrap · Assorted",
+        qty: 10,
+        unitPrice: "₦3,500",
+        taxExempt: true,
+      },
       { name: "Kids Ankara Set · 4Y", qty: 3, unitPrice: "₦11,000" },
       { name: "Kids Ankara Set · 6Y", qty: 3, unitPrice: "₦11,000" },
       { name: "Mens Kaftan · M", qty: 2, unitPrice: "₦28,000" },
       { name: "Mens Kaftan · L", qty: 2, unitPrice: "₦28,000" },
-      { name: "Gift Packaging · Large", qty: 15, unitPrice: "₦800", taxExempt: true },
-      { name: "Sample swatch pack", qty: 5, unitPrice: "₦1,500", taxExempt: true },
-      { name: "Display hanger kit", qty: 4, unitPrice: "₦2,200", taxExempt: true },
-      { name: "Bulk crate handling", qty: 1, unitPrice: "₦12,000", taxExempt: true },
+      {
+        name: "Gift Packaging · Large",
+        qty: 15,
+        unitPrice: "₦800",
+        taxExempt: true,
+      },
+      {
+        name: "Sample swatch pack",
+        qty: 5,
+        unitPrice: "₦1,500",
+        taxExempt: true,
+      },
+      {
+        name: "Display hanger kit",
+        qty: 4,
+        unitPrice: "₦2,200",
+        taxExempt: true,
+      },
+      {
+        name: "Bulk crate handling",
+        qty: 1,
+        unitPrice: "₦12,000",
+        taxExempt: true,
+      },
     ],
     created: "2d ago",
     owner: "Tunde B.",
-    notes: "VAT auto-applied only on taxable lines. Tax-free lines marked. Shipping is separate.",
+    notes:
+      "VAT auto-applied only on taxable lines. Tax-free lines marked. Shipping is separate.",
   },
   {
     id: "QT-1041",
@@ -934,7 +1618,12 @@ export const invoices: Invoice[] = [
     owner: "Tunde B.",
     lines: [
       { name: "Denim Jacket · M / Blue", qty: 1, unitPrice: "₦24,500" },
-      { name: "Beaded Clutch · Gold", qty: 1, unitPrice: "₦14,200", taxExempt: true },
+      {
+        name: "Beaded Clutch · Gold",
+        qty: 1,
+        unitPrice: "₦14,200",
+        taxExempt: true,
+      },
     ],
   },
 ]
@@ -948,17 +1637,73 @@ export function getInvoice(id: string): Invoice | undefined {
 }
 
 export const quoteKpis: Kpi[] = [
-  { id: "open", label: "Open quotes", value: "2", delta: "+1", trend: "up", helper: "sent or draft" },
-  { id: "accepted", label: "Accepted (30d)", value: "14", delta: "+3", trend: "up", helper: "ready to invoice" },
-  { id: "value", label: "Quoted value", value: "₦2.1M", delta: "+9%", trend: "up", helper: "last 30 days" },
-  { id: "convert", label: "Quote → order", value: "41%", delta: "+2%", trend: "up", helper: "conversion rate" },
+  {
+    id: "open",
+    label: "Open quotes",
+    value: "2",
+    delta: "+1",
+    trend: "up",
+    helper: "sent or draft",
+  },
+  {
+    id: "accepted",
+    label: "Accepted (30d)",
+    value: "14",
+    delta: "+3",
+    trend: "up",
+    helper: "ready to invoice",
+  },
+  {
+    id: "value",
+    label: "Quoted value",
+    value: "₦2.1M",
+    delta: "+9%",
+    trend: "up",
+    helper: "last 30 days",
+  },
+  {
+    id: "convert",
+    label: "Quote → order",
+    value: "41%",
+    delta: "+2%",
+    trend: "up",
+    helper: "conversion rate",
+  },
 ]
 
 export const invoiceKpis: Kpi[] = [
-  { id: "out", label: "Outstanding", value: "₦407k", delta: "+12%", trend: "up", helper: "sent + partial + overdue" },
-  { id: "paid", label: "Collected (30d)", value: "₦6.8M", delta: "+8%", trend: "up", helper: "marked paid" },
-  { id: "overdue", label: "Overdue", value: "1", delta: "0", trend: "down", helper: "needs chase" },
-  { id: "avg", label: "Avg. days to pay", value: "4.2", delta: "-0.6", trend: "down", helper: "faster is better" },
+  {
+    id: "out",
+    label: "Outstanding",
+    value: "₦407k",
+    delta: "+12%",
+    trend: "up",
+    helper: "sent + partial + overdue",
+  },
+  {
+    id: "paid",
+    label: "Collected (30d)",
+    value: "₦6.8M",
+    delta: "+8%",
+    trend: "up",
+    helper: "marked paid",
+  },
+  {
+    id: "overdue",
+    label: "Overdue",
+    value: "1",
+    delta: "0",
+    trend: "down",
+    helper: "needs chase",
+  },
+  {
+    id: "avg",
+    label: "Avg. days to pay",
+    value: "4.2",
+    delta: "-0.6",
+    trend: "down",
+    helper: "faster is better",
+  },
 ]
 
 // ── Attention inbox ─────────────────────────────────────────────────────────
@@ -1039,7 +1784,8 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     id: "wa",
     label: "Connect WhatsApp business number",
-    description: "So the sales team can paste payment & tracking links into chats",
+    description:
+      "So the sales team can paste payment & tracking links into chats",
     href: "/settings",
     done: true,
   },
@@ -1059,9 +1805,9 @@ export const onboardingSteps: OnboardingStep[] = [
   },
   {
     id: "order",
-    label: "Create a test order from Workspace",
+    label: "Create a test order from Home",
     description: "Catalog or freeform lines · shipping · VAT on products only",
-    href: "/workspace",
+    href: "/",
     done: false,
   },
 ]
@@ -1113,7 +1859,10 @@ export function getOrderDetail(orderId: string): OrderDetail | null {
     },
     {
       label: "Shipped",
-      at: base.status === "shipped" || base.status === "delivered" ? "In progress" : "—",
+      at:
+        base.status === "shipped" || base.status === "delivered"
+          ? "In progress"
+          : "—",
       done: base.status === "shipped" || base.status === "delivered",
     },
     {
@@ -1124,10 +1873,18 @@ export function getOrderDetail(orderId: string): OrderDetail | null {
   ]
 
   if (base.status === "cancelled") {
-    timeline.push({ label: "Cancelled · stock released", at: base.placed, done: true })
+    timeline.push({
+      label: "Cancelled · stock released",
+      at: base.placed,
+      done: true,
+    })
   }
   if (base.status === "expired") {
-    timeline.push({ label: "Expired · stock released", at: base.placed, done: true })
+    timeline.push({
+      label: "Expired · stock released",
+      at: base.placed,
+      done: true,
+    })
   }
 
   return {
@@ -1137,9 +1894,11 @@ export function getOrderDetail(orderId: string): OrderDetail | null {
     address: delivery?.destination ?? "12 Allen Ave, Ikeja, Lagos",
     paymentLink: `https://pay.workspace.kunemi.com/o/${orderId.replace("#", "")}`,
     trackingToken: delivery?.trackingToken,
-    lineItems: defaultLines.slice(0, Math.min(base.items, 2)).map((line, i) =>
-      i === 0 ? { ...line, qty: Math.max(1, base.items - 1) } : line,
-    ),
+    lineItems: defaultLines
+      .slice(0, Math.min(base.items, 2))
+      .map((line, i) =>
+        i === 0 ? { ...line, qty: Math.max(1, base.items - 1) } : line,
+      ),
     timeline,
   }
 }
@@ -1183,4 +1942,3 @@ export const openChats = [
     unread: 3,
   },
 ]
-

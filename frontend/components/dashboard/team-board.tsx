@@ -11,7 +11,13 @@ import {
   Users,
   Trash2,
 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,15 +46,12 @@ import {
   useRemoveMember,
   useTeam,
   useUpdateMemberRole,
-  type UserRole,
 } from "@/api"
-
-const roleLabel: Record<string, string> = {
-  owner: "Owner",
-  manager: "Manager",
-  sales: "Sales",
-  ops: "Ops",
-}
+import {
+  isOwnerRole,
+  productRoleLabel,
+  TEAM_API_ROLE,
+} from "@/lib/workspace-roles"
 
 function initials(name: string) {
   return name
@@ -70,12 +73,13 @@ export function TeamBoard() {
     refetch,
   } = useTeam(isAuthenticated)
   const members = data?.members ?? []
-  const seats = data?.seats ?? tierLimits[(business?.tier ?? "starter") as SubscriptionTier].teamSeats
+  const seats =
+    data?.seats ??
+    tierLimits[(business?.tier ?? "starter") as SubscriptionTier].teamSeats
   const updateRole = useUpdateMemberRole()
   const removeMember = useRemoveMember()
 
-  const canManage =
-    user?.role === "owner" || user?.role === "manager"
+  const canManage = isOwnerRole(user?.role)
 
   const error = queryError
     ? getApiErrorMessage(queryError)
@@ -93,15 +97,20 @@ export function TeamBoard() {
       (a) =>
         q === "" ||
         a.fullName.toLowerCase().includes(q) ||
-        a.role.toLowerCase().includes(q) ||
+        productRoleLabel(a.role).toLowerCase().includes(q) ||
         a.email.toLowerCase().includes(q),
     )
   }, [query, members])
 
   const owner = members.find((m) => m.role === "owner") ?? members[0]
+  const teamCount = members.filter((m) => m.role !== "owner").length
 
-  async function setRole(id: string, role: UserRole) {
-    await updateRole.mutateAsync({ id, role })
+  async function makeOwner(id: string) {
+    await updateRole.mutateAsync({ id, role: "owner" })
+  }
+
+  async function makeTeam(id: string) {
+    await updateRole.mutateAsync({ id, role: TEAM_API_ROLE })
   }
 
   async function remove(id: string, name: string) {
@@ -116,7 +125,7 @@ export function TeamBoard() {
           <CardHeader className="flex flex-row items-center justify-between gap-2">
             <div>
               <CardTitle>Team owner</CardTitle>
-              <CardDescription>Account owner on this business</CardDescription>
+              <CardDescription>Full control of this business</CardDescription>
             </div>
             <Button
               size="sm"
@@ -147,10 +156,10 @@ export function TeamBoard() {
                 </Avatar>
                 <div className="min-w-0">
                   <p className="font-medium">{owner.fullName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {roleLabel[owner.role] ?? owner.role}
+                  <p className="text-sm text-muted-foreground">Owner</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {owner.email}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">{owner.email}</p>
                 </div>
               </div>
             ) : (
@@ -164,13 +173,15 @@ export function TeamBoard() {
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                <p className="text-xs text-muted-foreground">Plan</p>
-                <p className="mt-1 text-lg font-semibold">{tierLimits[tier].label}</p>
+                <p className="text-xs text-muted-foreground">Team seats</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">
+                  {teamCount}
+                </p>
               </div>
             </div>
             {!canManage ? (
               <p className="mt-3 text-xs text-muted-foreground">
-                Only owners and managers can invite or change roles.
+                Only the owner can invite or change roles.
               </p>
             ) : null}
           </CardContent>
@@ -180,9 +191,9 @@ export function TeamBoard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageCircle className="size-4 text-primary" />
-              Live floor
+              People
             </CardTitle>
-            <CardDescription>Roster from API (chat presence later)</CardDescription>
+            <CardDescription>Owner + Team only</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {members.map((member) => (
@@ -196,9 +207,11 @@ export function TeamBoard() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{member.fullName}</p>
+                  <p className="truncate text-sm font-medium">
+                    {member.fullName}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {roleLabel[member.role] ?? member.role}
+                    {productRoleLabel(member.role)}
                   </p>
                 </div>
               </div>
@@ -213,9 +226,9 @@ export function TeamBoard() {
       <Card className="gap-0 overflow-hidden p-0 xl:col-span-2">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium">Sales team roster</p>
+            <p className="font-medium">Team roster</p>
             <p className="text-sm text-muted-foreground">
-              Roles · {members.length}/{seats} seats on {tierLimits[tier].label}
+              {members.length}/{seats} seats · {tierLimits[tier].label}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -236,7 +249,7 @@ export function TeamBoard() {
               disabled={!canManage || members.length >= seats}
               title={
                 !canManage
-                  ? "Owners and managers only"
+                  ? "Owner only"
                   : members.length >= seats
                     ? "Seat limit reached"
                     : "Invite teammate"
@@ -266,8 +279,8 @@ export function TeamBoard() {
                 title="No team members"
                 description={
                   canManage
-                    ? "Invite sales, ops, or managers. Seat limits follow your plan."
-                    : "Ask an owner or manager to invite you."
+                    ? "Invite teammates. They get Team access for day-to-day work."
+                    : "Ask the owner to invite you."
                 }
                 actionLabel={canManage ? "Invite" : undefined}
                 onAction={canManage ? () => setInviteOpen(true) : undefined}
@@ -280,15 +293,17 @@ export function TeamBoard() {
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="pl-4">Member</TableHead>
                     <TableHead className="hidden sm:table-cell">Role</TableHead>
-                    <TableHead className="hidden text-right md:table-cell">Joined</TableHead>
+                    <TableHead className="hidden text-right md:table-cell">
+                      Joined
+                    </TableHead>
                     <TableHead className="w-10 pr-4" aria-label="Actions" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((member) => {
                     const isSelf = member.id === user?.id
-                    const busy =
-                      updateRole.isPending || removeMember.isPending
+                    const busy = updateRole.isPending || removeMember.isPending
+                    const label = productRoleLabel(member.role)
                     return (
                       <TableRow key={member.id}>
                         <TableCell className="pl-4">
@@ -317,10 +332,11 @@ export function TeamBoard() {
                           <Badge
                             variant="secondary"
                             className={cn(
-                              member.role === "owner" && "bg-primary/15 text-primary",
+                              member.role === "owner" &&
+                                "bg-primary/15 text-primary",
                             )}
                           >
-                            {roleLabel[member.role] ?? member.role}
+                            {label}
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden text-right text-sm text-muted-foreground md:table-cell">
@@ -346,53 +362,21 @@ export function TeamBoard() {
                               )}
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {user?.role === "owner" && !isSelf ? (
+                              {canManage && !isSelf ? (
                                 <>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      void setRole(member.id, "owner")
-                                    }
-                                  >
-                                    Make owner
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      void setRole(member.id, "manager")
-                                    }
-                                  >
-                                    Make manager
-                                  </DropdownMenuItem>
-                                </>
-                              ) : null}
-                              {canManage && !isSelf && member.role !== "owner" ? (
-                                <>
-                                  {(user?.role === "owner" ||
-                                    member.role !== "manager") && (
-                                    <>
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          void setRole(member.id, "sales")
-                                        }
-                                      >
-                                        Make sales
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          void setRole(member.id, "ops")
-                                        }
-                                      >
-                                        Make ops
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                  {user?.role === "owner" &&
-                                  member.role === "manager" ? (
+                                  {member.role !== "owner" ? (
                                     <DropdownMenuItem
-                                      onClick={() =>
-                                        void setRole(member.id, "sales")
-                                      }
+                                      onClick={() => void makeOwner(member.id)}
                                     >
-                                      Demote to sales
+                                      Make owner
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  {member.role === "owner" ||
+                                  member.role !== TEAM_API_ROLE ? (
+                                    <DropdownMenuItem
+                                      onClick={() => void makeTeam(member.id)}
+                                    >
+                                      Make team
                                     </DropdownMenuItem>
                                   ) : null}
                                   <DropdownMenuItem
@@ -401,21 +385,15 @@ export function TeamBoard() {
                                       void remove(member.id, member.fullName)
                                     }
                                   >
-                                    <Trash2 className="size-4" />
+                                    <Trash2 className="size-3.5" />
                                     Remove
                                   </DropdownMenuItem>
                                 </>
-                              ) : null}
-                              {isSelf ? (
+                              ) : (
                                 <DropdownMenuItem disabled>
-                                  You cannot edit yourself here
+                                  No actions
                                 </DropdownMenuItem>
-                              ) : null}
-                              {!canManage ? (
-                                <DropdownMenuItem disabled>
-                                  View only
-                                </DropdownMenuItem>
-                              ) : null}
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

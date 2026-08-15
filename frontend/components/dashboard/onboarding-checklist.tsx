@@ -28,8 +28,8 @@ export function OnboardingChecklist() {
   const steps = useMemo(() => {
     const bankOk = Boolean(
       business?.bank.bankName &&
-        business?.bank.accountName &&
-        business?.bank.accountNumber,
+      business?.bank.accountName &&
+      business?.bank.accountNumber,
     )
     const waOk = Boolean(business?.whatsappNumber)
     return [
@@ -51,7 +51,7 @@ export function OnboardingChecklist() {
         id: "order",
         label: "Create your first order",
         description: "Freeform or catalog · customer pays by transfer",
-        href: "/workspace",
+        href: "/orders",
         done: false,
       },
       {
@@ -121,12 +121,15 @@ export function OnboardingChecklist() {
                   <p
                     className={cn(
                       "text-sm font-medium",
-                      step.done && "line-through decoration-muted-foreground/60",
+                      step.done &&
+                        "line-through decoration-muted-foreground/60",
                     )}
                   >
                     {step.label}
                   </p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {step.description}
+                  </p>
                 </div>
               </Link>
             </li>

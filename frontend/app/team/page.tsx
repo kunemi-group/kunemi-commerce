@@ -8,6 +8,7 @@ import { TeamBoard } from "@/components/dashboard/team-board"
 import { useAuth } from "@/lib/auth-context"
 import type { Kpi } from "@/lib/data"
 import { useTeam } from "@/api"
+import { isOwnerRole } from "@/lib/workspace-roles"
 
 export default function TeamPage() {
   const { isAuthenticated } = useAuth()
@@ -15,17 +16,15 @@ export default function TeamPage() {
   const members = data?.members ?? []
   const kpis = useMemo((): Kpi[] => {
     const total = members.length
-    const owners = members.filter((m) => m.role === "owner").length
-    const managers = members.filter((m) => m.role === "manager").length
-    const sales = members.filter(
-      (m) => m.role === "sales" || m.role === "agent",
-    ).length
+    const owners = members.filter((m) => isOwnerRole(m.role)).length
+    const team = total - owners
+    const seats = data?.seats ?? 0
     return [
       {
         id: "people",
         label: "Team members",
         value: String(total),
-        delta: "live",
+        delta: seats ? `${total}/${seats}` : "live",
         trend: "up",
         helper: "accounts on this business",
       },
@@ -35,36 +34,36 @@ export default function TeamPage() {
         value: String(owners),
         delta: "admin",
         trend: "up",
-        helper: "full control",
+        helper: "settings · bank · team",
       },
       {
-        id: "managers",
-        label: "Managers",
-        value: String(managers),
-        delta: "ops",
-        trend: "up",
-        helper: "ops & team leads",
+        id: "team",
+        label: "Team",
+        value: String(team),
+        delta: team > 0 ? "floor" : "—",
+        trend: team > 0 ? "up" : "down",
+        helper: "day-to-day commerce",
       },
       {
-        id: "sales",
-        label: "Sales / agents",
-        value: String(sales),
-        delta: sales > 0 ? "floor" : "—",
-        trend: sales > 0 ? "up" : "down",
-        helper: "chat → order closers",
+        id: "seats",
+        label: "Open seats",
+        value: String(Math.max(0, seats - total)),
+        delta: seats ? "plan" : "—",
+        trend: seats - total > 0 ? "up" : "down",
+        helper: "invite capacity left",
       },
     ]
-  }, [members])
+  }, [members, data?.seats])
 
   return (
     <DashboardShell
-      title="Sales Team"
-      subtitle="Human teammates with roles & permissions — performance, not AI agents."
+      title="Team"
+      subtitle="Owner and Team only — no manager/ops split until you need it."
     >
       <div className="flex flex-col gap-4 md:gap-6">
         <PageHeader
           title="People who sell with you"
-          description="Invite managers, sales, and ops. Track chat → paid per person. AI agents live under a separate menu."
+          description="Invite Team members for orders, products, payments, and deliveries. Only owners manage bank details, settings, and seats."
         />
         <KpiCards items={kpis} />
         <TeamBoard />

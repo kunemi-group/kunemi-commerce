@@ -52,11 +52,6 @@ export class TeamService {
   async invite(dto: InviteMemberDto, actor: AuthUser) {
     this.assertCanManageTeam(actor);
 
-    // Managers cannot invite other managers
-    if (actor.role === 'manager' && dto.role === 'manager') {
-      throw new ForbiddenException('Only owners can invite managers');
-    }
-
     const business = await this.businesses.findOne({
       where: { id: actor.businessId },
     });
@@ -83,22 +78,22 @@ export class TeamService {
       dto.password?.trim() || this.generateTempPassword();
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
+    // Product: Team only (stored as sales for legacy schema compatibility)
     const member = this.users.create({
       businessId: actor.businessId,
       email,
       fullName: dto.fullName.trim(),
-      role: dto.role,
+      role: 'sales',
       passwordHash,
     });
     await this.users.save(member);
 
-    // Send Team Invitation Email via SendByte API
     void this.mailService.sendTeamMemberInvitation(
       email,
       member.fullName,
       actor.email,
       temporaryPassword,
-      dto.role,
+      'team',
       business.name,
     );
 
@@ -121,23 +116,6 @@ export class TeamService {
 
     if (member.id === actor.sub && dto.role !== member.role) {
       throw new BadRequestException('You cannot change your own role');
-    }
-
-    // Only owner can assign or change owner role
-    if (dto.role === 'owner' || member.role === 'owner') {
-      if (actor.role !== 'owner') {
-        throw new ForbiddenException('Only the owner can change owner role');
-      }
-    }
-
-    // Manager cannot promote to manager or touch managers
-    if (actor.role === 'manager') {
-      if (member.role === 'manager' || dto.role === 'manager') {
-        throw new ForbiddenException('Managers can only manage sales/ops roles');
-      }
-      if (member.role === 'owner') {
-        throw new ForbiddenException('Cannot change owner role');
-      }
     }
 
     if (member.role === 'owner' && dto.role !== 'owner') {
@@ -166,9 +144,6 @@ export class TeamService {
     }
 
     if (member.role === 'owner') {
-      if (actor.role !== 'owner') {
-        throw new ForbiddenException('Only an owner can remove another owner');
-      }
       const owners = await this.users.count({
         where: { businessId: actor.businessId, role: 'owner' },
       });
@@ -177,19 +152,14 @@ export class TeamService {
       }
     }
 
-    if (actor.role === 'manager') {
-      if (member.role === 'owner' || member.role === 'manager') {
-        throw new ForbiddenException('Managers can only remove sales/ops');
-      }
-    }
-
     await this.users.remove(member);
     return { ok: true, id: memberId };
   }
 
+  /** Product surface: only owners manage team seats and roles. */
   private assertCanManageTeam(actor: AuthUser) {
-    if (actor.role !== 'owner' && actor.role !== 'manager') {
-      throw new ForbiddenException('Only owners and managers can manage the team');
+    if (actor.role !== 'owner') {
+      throw new ForbiddenException('Only the owner can manage the team');
     }
   }
 
