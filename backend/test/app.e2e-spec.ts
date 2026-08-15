@@ -198,27 +198,27 @@ describe('Kunemi Workspace API (e2e)', () => {
       .send({
         email,
         fullName: 'E2E Team Member',
-        role: 'sales',
+        role: 'team',
         password: 'Temporary123!',
       })
       .expect(201);
 
     const memberId = invited.body.member.id;
-    // Product surface: Team only (stored as sales). Legacy ops/manager invites rejected.
-    expect(invited.body.member.role).toBe('sales');
-
-    await agent
-      .patch(`/api/team/${memberId}/role`)
-      .set('Origin', 'http://localhost:3000')
-      .send({ role: 'ops' })
-      .expect(400);
+    // Product surface: Owner | Team only
+    expect(invited.body.member.role).toBe('team');
 
     await agent
       .patch(`/api/team/${memberId}/role`)
       .set('Origin', 'http://localhost:3000')
       .send({ role: 'sales' })
+      .expect(400);
+
+    await agent
+      .patch(`/api/team/${memberId}/role`)
+      .set('Origin', 'http://localhost:3000')
+      .send({ role: 'team' })
       .expect(200)
-      .expect((res) => expect(res.body.role).toBe('sales'));
+      .expect((res) => expect(res.body.role).toBe('team'));
 
     await agent
       .delete(`/api/team/${memberId}`)

@@ -13,13 +13,21 @@ export type JwtPayload = {
 
 export type AuthUser = JwtPayload;
 
+/** Workspace business seat: Owner or Team. */
 export function isStaff(user: AuthUser): boolean {
   return (
-    user.role === 'owner' ||
-    user.role === 'manager' ||
-    user.role === 'sales' ||
-    user.role === 'ops'
+    Boolean(user.businessId) && (user.role === 'owner' || user.role === 'team')
   );
+}
+
+/** Product: Owner */
+export function isOwner(user: AuthUser): boolean {
+  return user.role === 'owner' && Boolean(user.businessId);
+}
+
+/** Product: Team */
+export function isTeam(user: AuthUser): boolean {
+  return user.role === 'team' && Boolean(user.businessId);
 }
 
 export function isUser(user: AuthUser): boolean {
@@ -38,7 +46,7 @@ export function isSuperAdmin(user: AuthUser): boolean {
   return user.role === 'super_admin';
 }
 
-/** Staff-only business scope — throws conceptually at call sites that need a real id */
+/** Staff-only business scope */
 export function hasBusinessContext(user: AuthUser): boolean {
   return Boolean(user.businessId) && isStaff(user);
 }

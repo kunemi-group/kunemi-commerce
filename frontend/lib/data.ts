@@ -165,9 +165,9 @@ export const fulfillmentSeries = [
 
 /**
  * Human team members (not AI).
- * App login role `agent` in role-context = sales person session; permissions live here.
+ * Product roles: Owner | Team only.
  */
-export type TeamPermissionRole = "owner" | "manager" | "sales" | "ops"
+export type TeamPermissionRole = "owner" | "team"
 
 export interface TeamMember {
   id: string
@@ -176,7 +176,7 @@ export interface TeamMember {
   orders: number
   conversion: number
   revenue: string
-  /** RBAC role for dashboard access */
+  /** Product role: Owner | Team */
   role: TeamPermissionRole
   status: "online" | "away" | "offline"
   openChats: number
@@ -210,7 +210,7 @@ export const teamMembers: TeamMember[] = [
     orders: 276,
     conversion: 64,
     revenue: "₦4.3M",
-    role: "sales",
+    role: "team",
     status: "online",
     openChats: 7,
     avgResponse: "4m",
@@ -224,7 +224,7 @@ export const teamMembers: TeamMember[] = [
     orders: 241,
     conversion: 59,
     revenue: "₦3.6M",
-    role: "manager",
+    role: "team",
     status: "away",
     openChats: 2,
     avgResponse: "6m",
@@ -238,7 +238,7 @@ export const teamMembers: TeamMember[] = [
     orders: 198,
     conversion: 55,
     revenue: "₦2.9M",
-    role: "sales",
+    role: "team",
     status: "online",
     openChats: 5,
     avgResponse: "5m",
@@ -252,7 +252,7 @@ export const teamMembers: TeamMember[] = [
     orders: 167,
     conversion: 48,
     revenue: "₦2.1M",
-    role: "ops",
+    role: "team",
     status: "offline",
     openChats: 0,
     avgResponse: "9m",

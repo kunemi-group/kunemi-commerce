@@ -10,6 +10,7 @@ import {
 } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
+  changePasswordRequest,
   fetchMe,
   loginRequest,
   logoutLocal,
@@ -26,20 +27,25 @@ type AuthContextValue = {
   loading: boolean
   isAuthenticated: boolean
   onboardingComplete: boolean
+  mustChangePassword: boolean
   login: (
     email: string,
     password: string,
-  ) => Promise<{ onboardingComplete: boolean }>
+  ) => Promise<{ onboardingComplete: boolean; mustChangePassword: boolean }>
   register: (input: {
     businessName: string
     fullName: string
     email: string
     password: string
     whatsappNumber?: string
-  }) => Promise<{ onboardingComplete: boolean }>
+  }) => Promise<{ onboardingComplete: boolean; mustChangePassword: boolean }>
   logout: () => Promise<void>
   refresh: () => Promise<void>
   updateBusiness: (patch: Record<string, unknown>) => Promise<BusinessProfile>
+  changePassword: (input: {
+    currentPassword: string
+    newPassword: string
+  }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -52,16 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [business, setBusiness] = useState<BusinessProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const applySession = useCallback(
-    async () => {
-      const me = await fetchMe()
-      setUser(me.user)
-      setBusiness(me.business)
-      queryClient.setQueryData(queryKeys.me, me)
-      return me
-    },
-    [queryClient],
-  )
+  const applySession = useCallback(async () => {
+    const me = await fetchMe()
+    setUser(me.user)
+    setBusiness(me.business)
+    queryClient.setQueryData(queryKeys.me, me)
+    return me
+  }, [queryClient])
 
   const refresh = useCallback(async () => {
     try {
@@ -87,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await applySession()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
+          mustChangePassword: Boolean(me.user?.mustChangePassword),
         }
       } finally {
         setLoading(false)
@@ -109,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await applySession()
         return {
           onboardingComplete: Boolean(me.business?.onboarding?.complete),
+          mustChangePassword: Boolean(me.user?.mustChangePassword),
         }
       } finally {
         setLoading(false)
@@ -136,6 +141,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient, user],
   )
 
+  const changePassword = useCallback(
+    async (input: { currentPassword: string; newPassword: string }) => {
+      await changePasswordRequest(input)
+      await applySession()
+    },
+    [applySession],
+  )
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -143,11 +156,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       isAuthenticated: Boolean(user),
       onboardingComplete: Boolean(business?.onboarding?.complete),
+      mustChangePassword: Boolean(user?.mustChangePassword),
       login,
       register,
       logout,
       refresh,
       updateBusiness,
+      changePassword,
     }),
     [
       user,
@@ -158,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refresh,
       updateBusiness,
+      changePassword,
     ],
   )
 

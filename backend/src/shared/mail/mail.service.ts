@@ -132,10 +132,36 @@ export class MailService {
           <p style="margin: 0; color: #334155;"><strong>Login Email:</strong> ${email}</p>
           <p style="margin: 5px 0 0 0; color: #334155;"><strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${tempPassword}</code></p>
         </div>
-        <p style="color: #475569; font-size: 14px;">Sign in to your Workspace dashboard to get started.</p>
+        <p style="color: #475569; font-size: 14px;">
+          Sign in to Kunemi Workspace. You will be asked to set a new password on first login.
+        </p>
       </div>
     `;
-    const text = `Hello ${fullName},\n${inviterName} invited you to join ${storeName} as ${role}.\nEmail: ${email}\nTemp Password: ${tempPassword}`;
+    const text = `Hello ${fullName},\n${inviterName} invited you to join ${storeName} as ${role}.\nEmail: ${email}\nTemp Password: ${tempPassword}\nYou must set a new password after signing in.`;
+    return this.sendMail({ to: email, subject, html, text });
+  }
+
+  /** Workspace password-reset OTP */
+  async sendPasswordResetOtp(
+    email: string,
+    fullName: string,
+    resetCode: string,
+  ) {
+    const subject = `${resetCode} - Reset your Kunemi Workspace password`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #4f6bed;">Password reset</h2>
+        <p style="color: #475569; font-size: 15px;">Hello ${fullName},</p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.5;">
+          Use this 6-digit code to reset your Kunemi Workspace password:
+        </p>
+        <div style="background-color: #f1f5f9; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #4f6bed;">${resetCode}</span>
+        </div>
+        <p style="color: #64748b; font-size: 13px;">This code expires in 15 minutes. If you did not request a reset, ignore this email.</p>
+      </div>
+    `;
+    const text = `Hello ${fullName},\nPassword reset code: ${resetCode}\nExpires in 15 minutes.`;
     return this.sendMail({ to: email, subject, html, text });
   }
 
@@ -219,7 +245,9 @@ export class MailService {
   ) {
     const formattedAmount = `${currency} ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
-    const paymentUrl = paymentToken ? `${appUrl}/pay/${paymentToken}` : `${appUrl}/documents/invoice/${docId}`;
+    const paymentUrl = paymentToken
+      ? `${appUrl}/pay/${paymentToken}`
+      : `${appUrl}/documents/invoice/${docId}`;
     const subject = `Invoice ${docNumber} - Payment Request`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">

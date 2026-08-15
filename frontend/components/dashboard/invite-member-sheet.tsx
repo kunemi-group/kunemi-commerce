@@ -90,7 +90,7 @@ export function InviteMemberSheet({
           </SheetTitle>
           <SheetDescription>
             Adds a Team login for this business. Share the temporary password
-            securely.
+            securely — they must set a new password on first sign-in.
           </SheetDescription>
         </SheetHeader>
 
@@ -103,7 +103,8 @@ export function InviteMemberSheet({
                   Member invited
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  They can sign in at the login page with these credentials.
+                  They sign in with these credentials, then must set a new
+                  password before using Workspace.
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-secondary/30 p-3 text-sm">

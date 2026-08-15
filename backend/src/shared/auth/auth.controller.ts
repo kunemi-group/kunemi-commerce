@@ -17,6 +17,9 @@ import {
   VerifyEmailDto,
   ResendOtpDto,
   RefreshTokenDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -43,8 +46,11 @@ export class AuthController {
   ): Promise<Omit<T, 'accessToken' | 'refreshToken'>> {
     const result = await resultPromise;
     setSessionCookies(response, result);
-    const { accessToken: _accessToken, refreshToken: _refreshToken, ...body } =
-      result;
+    const {
+      accessToken: _accessToken,
+      refreshToken: _refreshToken,
+      ...body
+    } = result;
     return body;
   }
 
@@ -170,5 +176,33 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user);
+  }
+
+  /** Change password (signed-in). Clears mustChangePassword after invite. */
+  @ApiBearerAuth('JWT-auth')
+  @Post('change-password')
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() body: ChangePasswordDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.establishSession(
+      response,
+      this.auth.changePassword(user, body),
+    );
+  }
+
+  /** Request Workspace Owner/Team password-reset OTP */
+  @Public()
+  @Post('forgot-password')
+  forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.auth.forgotPassword(body);
+  }
+
+  /** Complete password reset with OTP */
+  @Public()
+  @Post('reset-password')
+  resetPassword(@Body() body: ResetPasswordDto) {
+    return this.auth.resetPassword(body);
   }
 }

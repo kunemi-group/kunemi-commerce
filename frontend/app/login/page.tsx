@@ -5,11 +5,23 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Boxes, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { useAuth } from "@/lib/auth-context"
 
 function LoginForm() {
-  const { login, isAuthenticated, onboardingComplete, loading } = useAuth()
+  const {
+    login,
+    isAuthenticated,
+    onboardingComplete,
+    mustChangePassword,
+    loading,
+  } = useAuth()
   const params = useSearchParams()
   const next = params.get("next") || "/"
 
@@ -25,13 +37,19 @@ function LoginForm() {
     try {
       const result = await login(email.trim(), password)
       // Full navigation avoids App Router setState-during-render races
+      if (result.mustChangePassword) {
+        window.location.assign("/change-password")
+        return
+      }
       if (!result.onboardingComplete) {
         window.location.assign("/onboarding")
         return
       }
       const dest = next.startsWith("/") ? next : "/"
       const safe =
-        dest === "/login" || dest === "/register" ? "/" : dest
+        dest === "/login" || dest === "/register" || dest === "/change-password"
+          ? "/"
+          : dest
       window.location.assign(safe)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed")
@@ -44,7 +62,11 @@ function LoginForm() {
     return (
       <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
-        {onboardingComplete ? "Opening dashboard…" : "Continue setup…"}
+        {mustChangePassword
+          ? "Set a new password…"
+          : onboardingComplete
+            ? "Opening dashboard…"
+            : "Continue setup…"}
       </div>
     )
   }
@@ -54,13 +76,16 @@ function LoginForm() {
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Use your business owner or team account. Demo: owner@lagosthreads.co / password123
+          Use your Owner or Team account. Demo: owner@lagosthreads.co /
+          password123
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-3" onSubmit={onSubmit}>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Email</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Email
+            </span>
             <input
               type="email"
               required
@@ -71,7 +96,9 @@ function LoginForm() {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Password</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Password
+            </span>
             <input
               type="password"
               required
@@ -81,15 +108,30 @@ function LoginForm() {
               className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full gap-2" disabled={busy || loading}>
+          <Button
+            type="submit"
+            className="w-full gap-2"
+            disabled={busy || loading}
+          >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             Sign in
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           New business?{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link
+            href="/register"
+            className="font-medium text-primary hover:underline"
+          >
             Create an account
           </Link>
         </p>
@@ -107,7 +149,9 @@ export default function LoginPage() {
         </div>
         <div className="leading-tight">
           <p className="font-semibold tracking-tight">Kunemi Workspace</p>
-          <p className="text-xs text-muted-foreground">Kunemi Commerce · Workspace</p>
+          <p className="text-xs text-muted-foreground">
+            Kunemi Commerce · Workspace
+          </p>
         </div>
       </div>
       <Suspense

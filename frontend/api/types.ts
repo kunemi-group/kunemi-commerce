@@ -113,8 +113,7 @@ export type ApiDelivery = {
   }>
 }
 
-export type UserRole =
-  "owner" | "manager" | "sales" | "ops" | "user" | "admin" | "super_admin"
+export type UserRole = "owner" | "team" | "user" | "admin" | "super_admin"
 
 export type ApiTeamMember = {
   id: string
@@ -161,6 +160,9 @@ export type AuthUser = {
   role: string
   /** Null for ShopFlow buyers */
   businessId: string | null
+  /** True after team invite until password is changed */
+  mustChangePassword?: boolean
+  isEmailVerified?: boolean
 }
 
 export type BusinessProfile = {

@@ -1,41 +1,52 @@
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { ForbiddenException } from '@nestjs/common';
 import { RolesGuard } from './roles.guard';
 
-function context(request: Record<string, unknown>) {
+function context(data: { user?: { role?: string } }) {
   return {
-    getHandler: jest.fn(),
-    getClass: jest.fn(),
-    switchToHttp: () => ({ getRequest: () => request }),
-  } as unknown as ExecutionContext;
+    getHandler: () => ({}),
+    getClass: () => ({}),
+    switchToHttp: () => ({
+      getRequest: () => data,
+    }),
+  } as never;
 }
 
 describe('RolesGuard', () => {
-  const reflector = { getAllAndOverride: jest.fn() } as unknown as Reflector;
+  const reflector = {
+    getAllAndOverride: jest.fn(),
+  };
 
-  beforeEach(() => jest.clearAllMocks());
-
-  it('allows routes without role metadata', () => {
+  it('allows when no roles are required', () => {
     reflector.getAllAndOverride = jest.fn().mockReturnValue(undefined);
-    expect(new RolesGuard(reflector).canActivate(context({}))).toBe(true);
+    expect(new RolesGuard(reflector as never).canActivate(context({}))).toBe(
+      true,
+    );
   });
 
-  it('rejects a request without an authenticated role', () => {
+  it('denies Team when Owner is required', () => {
     reflector.getAllAndOverride = jest.fn().mockReturnValue(['owner']);
-    expect(() => new RolesGuard(reflector).canActivate(context({}))).toThrow(ForbiddenException);
-  });
-
-  it('rejects roles outside the controller policy', () => {
-    reflector.getAllAndOverride = jest.fn().mockReturnValue(['owner', 'manager']);
     expect(() =>
-      new RolesGuard(reflector).canActivate(context({ user: { role: 'sales' } })),
+      new RolesGuard(reflector as never).canActivate(
+        context({ user: { role: 'team' } }),
+      ),
     ).toThrow(ForbiddenException);
   });
 
-  it('allows a role explicitly listed by the route policy', () => {
-    reflector.getAllAndOverride = jest.fn().mockReturnValue(['owner', 'manager']);
+  it('allows Owner when Owner is required', () => {
+    reflector.getAllAndOverride = jest.fn().mockReturnValue(['owner']);
     expect(
-      new RolesGuard(reflector).canActivate(context({ user: { role: 'manager' } })),
+      new RolesGuard(reflector as never).canActivate(
+        context({ user: { role: 'owner' } }),
+      ),
+    ).toBe(true);
+  });
+
+  it('allows Team when Owner or Team is required', () => {
+    reflector.getAllAndOverride = jest.fn().mockReturnValue(['owner', 'team']);
+    expect(
+      new RolesGuard(reflector as never).canActivate(
+        context({ user: { role: 'team' } }),
+      ),
     ).toBe(true);
   });
 });

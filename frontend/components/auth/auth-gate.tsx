@@ -6,33 +6,44 @@ import { Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
 /** Routes that never require a session */
-const PUBLIC_PREFIXES = ["/login", "/register", "/pay", "/track"]
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/pay",
+  "/track",
+]
 
 function isPublic(path: string) {
-  return PUBLIC_PREFIXES.some(
-    (p) => path === p || path.startsWith(`${p}/`),
-  )
+  return PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))
 }
 
 function isOnboardingPath(path: string) {
   return path === "/onboarding"
 }
 
+function isChangePasswordPath(path: string) {
+  return path === "/change-password"
+}
+
 /**
- * Protects dashboard routes: requires login, then forces onboarding if incomplete.
+ * Protects dashboard routes: login → force password change (invite) → onboarding.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { loading, isAuthenticated, onboardingComplete } = useAuth()
+  const { loading, isAuthenticated, onboardingComplete, mustChangePassword } =
+    useAuth()
   const pathname = usePathname()
   const publicPage = isPublic(pathname)
 
   useEffect(() => {
     if (loading) return
 
-    // Use assign for auth redirects — avoids nested App Router transitions
-    // fighting React render of login/register.
     const go = (href: string) => {
-      if (typeof window !== "undefined" && window.location.pathname + window.location.search !== href) {
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname + window.location.search !== href
+      ) {
         window.location.assign(href)
       }
     }
@@ -42,16 +53,49 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return
     }
 
-    if (isAuthenticated && (pathname === "/login" || pathname === "/register")) {
+    if (
+      isAuthenticated &&
+      (pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/forgot-password" ||
+        pathname === "/reset-password")
+    ) {
+      if (mustChangePassword) {
+        go("/change-password")
+        return
+      }
       go(onboardingComplete ? "/" : "/onboarding")
       return
     }
 
     if (
       isAuthenticated &&
+      mustChangePassword &&
+      !isChangePasswordPath(pathname) &&
+      !publicPage
+    ) {
+      go("/change-password")
+      return
+    }
+
+    if (
+      isAuthenticated &&
+      !mustChangePassword &&
+      isChangePasswordPath(pathname)
+    ) {
+      // Voluntary password change is allowed from settings; forced page only when required.
+      // If they finished force-change, send them onward.
+      go(onboardingComplete ? "/" : "/onboarding")
+      return
+    }
+
+    if (
+      isAuthenticated &&
+      !mustChangePassword &&
       !onboardingComplete &&
       !publicPage &&
-      !isOnboardingPath(pathname)
+      !isOnboardingPath(pathname) &&
+      !isChangePasswordPath(pathname)
     ) {
       go("/onboarding")
       return
@@ -60,7 +104,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (
       isAuthenticated &&
       onboardingComplete &&
-      isOnboardingPath(pathname)
+      isOnboardingPath(pathname) &&
+      !mustChangePassword
     ) {
       go("/")
     }
@@ -68,6 +113,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     loading,
     isAuthenticated,
     onboardingComplete,
+    mustChangePassword,
     pathname,
     publicPage,
   ])
@@ -81,7 +127,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Avoid flash of protected UI while redirecting
   if (!publicPage && !isAuthenticated) {
     return (
       <div className="flex min-h-svh items-center justify-center gap-2 text-muted-foreground">
@@ -93,9 +138,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (
     isAuthenticated &&
+    mustChangePassword &&
+    !isChangePasswordPath(pathname) &&
+    !publicPage
+  ) {
+    return (
+      <div className="flex min-h-svh items-center justify-center gap-2 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+        Set a new password…
+      </div>
+    )
+  }
+
+  if (
+    isAuthenticated &&
+    !mustChangePassword &&
     !onboardingComplete &&
     !publicPage &&
-    pathname !== "/onboarding"
+    pathname !== "/onboarding" &&
+    pathname !== "/change-password"
   ) {
     return (
       <div className="flex min-h-svh items-center justify-center gap-2 text-muted-foreground">

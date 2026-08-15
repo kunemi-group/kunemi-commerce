@@ -20,7 +20,9 @@ export default function DeliveriesPage() {
       ["picked_up", "in_transit", "out_for_delivery"].includes(d.status),
     ).length
     const delivered = deliveries.filter((d) => d.status === "delivered").length
-    const manual = deliveries.filter((d) => d.fulfillmentMode === "manual").length
+    const manual = deliveries.filter(
+      (d) => d.fulfillmentMode === "manual",
+    ).length
     return [
       {
         id: "total",
@@ -50,7 +52,7 @@ export default function DeliveriesPage() {
         id: "manual",
         label: "Manual mode",
         value: String(manual),
-        delta: "ops",
+        delta: "live",
         trend: "down",
         helper: "not API courier",
       },
