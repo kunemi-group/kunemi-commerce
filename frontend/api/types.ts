@@ -114,13 +114,7 @@ export type ApiDelivery = {
 }
 
 export type UserRole =
-  | "owner"
-  | "manager"
-  | "sales"
-  | "ops"
-  | "user"
-  | "admin"
-  | "super_admin"
+  "owner" | "manager" | "sales" | "ops" | "user" | "admin" | "super_admin"
 
 export type ApiTeamMember = {
   id: string
@@ -144,6 +138,8 @@ export type ApiPayment = {
   hasProof: boolean
   proofFilename: string | null
   proofUrl: string | null
+  /** Present when payment was verified (bank transfer confirm). */
+  verifiedAt?: string | null
   rejectReason: string | null
   createdAt: string
   updatedAt: string
@@ -210,19 +206,10 @@ export type BusinessProfile = {
 }
 
 export type QuoteStatus =
-  | "draft"
-  | "sent"
-  | "accepted"
-  | "expired"
-  | "converted"
+  "draft" | "sent" | "accepted" | "expired" | "converted"
 
 export type InvoiceDocStatus =
-  | "draft"
-  | "sent"
-  | "partial"
-  | "paid"
-  | "overdue"
-  | "void"
+  "draft" | "sent" | "partial" | "paid" | "overdue" | "void"
 
 export type ApiDocumentLine = {
   id: string
@@ -358,7 +345,11 @@ export type PublicPayResponse = {
   rejectReason: string | null
   checkoutUrl?: string | null
   requiresManualClaim?: boolean
-  availablePaymentMethods?: Array<{ id: string; label: string; isDefault: boolean }>
+  availablePaymentMethods?: Array<{
+    id: string
+    label: string
+    isDefault: boolean
+  }>
   business: {
     name: string
     whatsapp: string | null

@@ -3,7 +3,13 @@
 import { useMemo } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Loader2 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   ChartContainer,
   ChartTooltip,
@@ -18,13 +24,13 @@ const config = {
   orders: { label: "Orders", color: "var(--chart-2)" },
 } satisfies ChartConfig
 
-export function RevenueChart() {
+export function RevenueChart({ days = 14 }: { days?: number }) {
   const { isAuthenticated } = useAuth()
   const money = useMoney()
   const { data: orders = [], isLoading } = useOrders(isAuthenticated)
   const series = useMemo(
-    () => buildRevenueSeries(orders, 14, money.currency),
-    [orders, money.currency],
+    () => buildRevenueSeries(orders, days, money.currency),
+    [orders, money.currency, days],
   )
   const hasData = series.some((d) => d.orders > 0 || d.revenue > 0)
 
@@ -34,7 +40,7 @@ export function RevenueChart() {
         <div>
           <CardTitle>Revenue &amp; orders</CardTitle>
           <CardDescription>
-            Last 14 days · paid, shipped, and delivered (live)
+            Last {days} days · paid, shipped, and delivered (live)
           </CardDescription>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -56,7 +62,9 @@ export function RevenueChart() {
           </div>
         ) : !hasData ? (
           <div className="flex h-[260px] flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">No confirmed revenue yet</p>
+            <p className="font-medium text-foreground">
+              No confirmed revenue yet
+            </p>
             <p>Paid orders will appear here by day.</p>
           </div>
         ) : (
@@ -64,15 +72,35 @@ export function RevenueChart() {
             <AreaChart data={series} margin={{ left: 4, right: 4, top: 8 }}>
               <defs>
                 <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-revenue)"
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-revenue)"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
                 <linearGradient id="fillOrders" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-orders)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="var(--color-orders)" stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-orders)"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-orders)"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+              />
               <XAxis
                 dataKey="date"
                 tickLine={false}
@@ -99,7 +127,9 @@ export function RevenueChart() {
                     indicator="dot"
                     formatter={(value, name) => (
                       <div className="flex w-full items-center justify-between gap-3">
-                        <span className="text-muted-foreground capitalize">{name}</span>
+                        <span className="text-muted-foreground capitalize">
+                          {name}
+                        </span>
                         <span className="font-medium tabular-nums">
                           {name === "revenue"
                             ? money.formatMajor(Number(value) || 0)
