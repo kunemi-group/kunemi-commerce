@@ -111,7 +111,10 @@ export class OrdersService {
 
           const desc =
             item.description?.trim() ||
-            [variant.sku, variant.attributes ? JSON.stringify(variant.attributes) : null]
+            [
+              variant.sku,
+              variant.attributes ? JSON.stringify(variant.attributes) : null,
+            ]
               .filter(Boolean)
               .join(' · ') ||
             `SKU ${variant.id.slice(0, 8)}`;
@@ -152,7 +155,8 @@ export class OrdersService {
 
       const totals = computeOrderTotals({
         lines: built,
-        shippingFeeCents: dto.shippingFeeCents ?? business.defaultShippingFeeCents,
+        shippingFeeCents:
+          dto.shippingFeeCents ?? business.defaultShippingFeeCents,
         taxEnabled: business.taxEnabled,
         taxRatePercent: Number(business.taxRatePercent),
       });
@@ -275,11 +279,7 @@ export class OrdersService {
 
     return {
       orders: rows.map((o) =>
-        this.toListItem(
-          o,
-          paymentByOrder.get(o.id),
-          deliveryByOrder.get(o.id),
-        ),
+        this.toListItem(o, paymentByOrder.get(o.id), deliveryByOrder.get(o.id)),
       ),
     };
   }
@@ -354,7 +354,11 @@ export class OrdersService {
         'No payment record for this order — create a new order with bank transfer flow',
       );
     }
-    const verified = await this.paymentsService.verify(payment.id, user, 'Marked paid via order shortcut');
+    const verified = await this.paymentsService.verify(
+      payment.id,
+      user,
+      'Marked paid via order shortcut',
+    );
     return { id, status: 'paid' as const, payment: verified };
   }
 
@@ -372,7 +376,9 @@ export class OrdersService {
       );
       if (!order) throw new NotFoundException('Order not found');
       if (!['pending', 'payment_review', 'paid'].includes(order.status)) {
-        throw new BadRequestException(`Cannot cancel order in status ${order.status}`);
+        throw new BadRequestException(
+          `Cannot cancel order in status ${order.status}`,
+        );
       }
 
       const from = order.status;
@@ -387,14 +393,16 @@ export class OrdersService {
             }),
           );
           if (variant) {
-            variant.stockReserved = Math.max(0, variant.stockReserved - item.quantity);
+            variant.stockReserved = Math.max(
+              0,
+              variant.stockReserved - item.quantity,
+            );
             await variantRepo.save(variant);
           }
         }
-        await manager.getRepository(Payment).update(
-          { orderId: order.id },
-          { status: 'expired' },
-        );
+        await manager
+          .getRepository(Payment)
+          .update({ orderId: order.id }, { status: 'expired' });
       }
 
       order.status = 'cancelled';
@@ -426,7 +434,7 @@ export class OrdersService {
       .getMany();
 
     let expired = 0;
-    const expiredIds: string[] = [];
+    const expiredOrders: Array<{ id: string; businessId: string }> = [];
     for (const order of stale) {
       await this.dataSource.transaction(async (manager) => {
         const orderRepo = manager.getRepository(Order);
@@ -436,7 +444,11 @@ export class OrdersService {
 
         const locked = await orderRepo.findOne(
           this.findOpts({
-            where: { id: order.id, status: 'pending' as const },
+            where: {
+              id: order.id,
+              businessId: order.businessId,
+              status: 'pending' as const,
+            },
           }),
         );
         if (!locked) return;
@@ -453,7 +465,10 @@ export class OrdersService {
             }),
           );
           if (variant) {
-            variant.stockReserved = Math.max(0, variant.stockReserved - item.quantity);
+            variant.stockReserved = Math.max(
+              0,
+              variant.stockReserved - item.quantity,
+            );
             await variantRepo.save(variant);
           }
         }
@@ -471,11 +486,11 @@ export class OrdersService {
           }),
         );
         expired += 1;
-        expiredIds.push(locked.id);
+        expiredOrders.push({ id: locked.id, businessId: locked.businessId });
       });
     }
-    if (expiredIds.length) {
-      await this.paymentsService.markExpiredForOrders(expiredIds);
+    if (expiredOrders.length) {
+      await this.paymentsService.markExpiredForOrders(expiredOrders);
     }
     return { expired };
   }
