@@ -7,20 +7,17 @@ import {
   Truck,
   Settings,
   MessageSquare,
-  Bot,
   FileText,
   Receipt,
   type LucideIcon,
 } from "lucide-react"
-import type { AppRole } from "@/lib/role-context"
 
 export interface NavItem {
   label: string
   icon: LucideIcon
   href: string
-  badge?: string
-  /** If set, only these roles see the item */
-  roles?: AppRole[]
+  /** Owner-only nav (settings, team manage). */
+  ownerOnly?: boolean
 }
 
 export interface NavGroup {
@@ -28,74 +25,44 @@ export interface NavGroup {
   items: NavItem[]
 }
 
+/**
+ * Simplified Workspace IA (Phase A):
+ * Home · Inbox · Orders · Products · Money · Deliveries · Quotes · Invoices · Team · Settings
+ * Store + Insights land in later phases. AI Agents stay unlisted.
+ */
 export const navGroups: NavGroup[] = [
   {
     heading: "Overview",
     items: [
-      {
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        href: "/",
-        roles: ["owner"],
-      },
-      {
-        label: "Workspace",
-        icon: MessageSquare,
-        href: "/workspace",
-      },
-      {
-        label: "Inbox",
-        icon: MessageSquare,
-        href: "/inbox",
-      },
-      { label: "Orders", icon: ShoppingCart, href: "/orders", badge: "86" },
-      {
-        label: "Inventory",
-        icon: Package,
-        href: "/inventory",
-        badge: "4",
-      },
+      { label: "Home", icon: LayoutDashboard, href: "/" },
+      { label: "Inbox", icon: MessageSquare, href: "/inbox" },
+      { label: "Orders", icon: ShoppingCart, href: "/orders" },
+      { label: "Products", icon: Package, href: "/inventory" },
     ],
   },
   {
     heading: "Commerce",
     items: [
-      { label: "Quotations", icon: FileText, href: "/quotations", badge: "2" },
-      { label: "Invoices", icon: Receipt, href: "/invoices", badge: "3" },
-      { label: "Payments", icon: CreditCard, href: "/payments", badge: "3" },
-      { label: "Deliveries", icon: Truck, href: "/deliveries", badge: "4" },
-    ],
-  },
-  {
-    heading: "People",
-    items: [
-      {
-        label: "Sales Team",
-        icon: Users,
-        href: "/team",
-        roles: ["owner"],
-      },
-      {
-        label: "AI Agents",
-        icon: Bot,
-        href: "/ai-agents",
-        roles: ["owner"],
-      },
+      { label: "Money", icon: CreditCard, href: "/payments" },
+      { label: "Deliveries", icon: Truck, href: "/deliveries" },
+      { label: "Quotations", icon: FileText, href: "/quotations" },
+      { label: "Invoices", icon: Receipt, href: "/invoices" },
     ],
   },
   {
     heading: "Account",
-    items: [{ label: "Settings", icon: Settings, href: "/settings", roles: ["owner"] }],
+    items: [
+      { label: "Team", icon: Users, href: "/team", ownerOnly: true },
+      { label: "Settings", icon: Settings, href: "/settings", ownerOnly: true },
+    ],
   },
 ]
 
-export function navForRole(role: AppRole): NavGroup[] {
+export function navForUser(opts: { isOwner: boolean }): NavGroup[] {
   return navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter(
-        (item) => !item.roles || item.roles.includes(role),
-      ),
+      items: group.items.filter((item) => !item.ownerOnly || opts.isOwner),
     }))
     .filter((g) => g.items.length > 0)
 }

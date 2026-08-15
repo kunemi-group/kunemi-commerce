@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { TeamService } from './team.service';
 
@@ -19,13 +24,7 @@ describe('TeamService', () => {
     role: 'owner' as const,
     email: 'owner@example.com',
   };
-  const manager = {
-    sub: 'manager-1',
-    businessId: 'business-1',
-    role: 'manager' as const,
-    email: 'manager@example.com',
-  };
-  const sales = {
+  const teamMember = {
     sub: 'sales-1',
     businessId: 'business-1',
     role: 'sales' as const,
@@ -37,12 +36,21 @@ describe('TeamService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     users.save.mockImplementation(async (user) => user);
-    service = new TeamService(users as never, businesses as never, mailService as never);
+    service = new TeamService(
+      users as never,
+      businesses as never,
+      mailService as never,
+    );
   });
 
   it('lists members and seat usage within the actor business', async () => {
     users.find.mockResolvedValue([
-      { id: 'owner-1', email: 'owner@example.com', fullName: 'Owner', role: 'owner' },
+      {
+        id: 'owner-1',
+        email: 'owner@example.com',
+        fullName: 'Owner',
+        role: 'owner',
+      },
     ]);
     businesses.findOne.mockResolvedValue({ subscriptionTier: 'starter' });
 
@@ -53,31 +61,41 @@ describe('TeamService', () => {
       where: { businessId: 'business-1' },
       order: { createdAt: 'ASC' },
     });
-    expect(businesses.findOne).toHaveBeenCalledWith({ where: { id: 'business-1' } });
+    expect(businesses.findOne).toHaveBeenCalledWith({
+      where: { id: 'business-1' },
+    });
   });
 
-  it('rejects team management by non-managerial roles', async () => {
+  it('rejects team management by non-owners', async () => {
     await expect(
       service.invite(
         { email: 'new@example.com', fullName: 'New User', role: 'sales' },
-        sales,
+        teamMember,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(businesses.findOne).not.toHaveBeenCalled();
   });
 
-  it('prevents managers from inviting another manager', async () => {
+  it('rejects legacy manager role from managing the team', async () => {
+    const manager = {
+      sub: 'manager-1',
+      businessId: 'business-1',
+      role: 'manager' as const,
+      email: 'manager@example.com',
+    };
     await expect(
       service.invite(
-        { email: 'new@example.com', fullName: 'New Manager', role: 'manager' },
+        { email: 'new@example.com', fullName: 'New User', role: 'sales' },
         manager,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(users.create).not.toHaveBeenCalled();
   });
 
   it('enforces seat limits before creating an invite', async () => {
-    businesses.findOne.mockResolvedValue({ subscriptionTier: 'starter', name: 'Store' });
+    businesses.findOne.mockResolvedValue({
+      subscriptionTier: 'starter',
+      name: 'Store',
+    });
     users.count.mockResolvedValue(2);
 
     await expect(
@@ -89,8 +107,11 @@ describe('TeamService', () => {
     expect(users.findOne).not.toHaveBeenCalled();
   });
 
-  it('creates a tenant-scoped invite with a password hash', async () => {
-    businesses.findOne.mockResolvedValue({ subscriptionTier: 'starter', name: 'Store' });
+  it('creates a tenant-scoped Team invite with a password hash', async () => {
+    businesses.findOne.mockResolvedValue({
+      subscriptionTier: 'starter',
+      name: 'Store',
+    });
     users.count.mockResolvedValue(1);
     users.findOne.mockResolvedValue(null);
     const member = {
@@ -113,25 +134,36 @@ describe('TeamService', () => {
       owner,
     );
 
-    expect(users.findOne).toHaveBeenCalledWith({ where: { email: 'new@example.com' } });
+    expect(users.findOne).toHaveBeenCalledWith({
+      where: { email: 'new@example.com' },
+    });
     expect(users.create).toHaveBeenCalledWith(
-      expect.objectContaining({ businessId: 'business-1', email: 'new@example.com', role: 'sales' }),
+      expect.objectContaining({
+        businessId: 'business-1',
+        email: 'new@example.com',
+        role: 'sales',
+      }),
     );
     const created = users.create.mock.calls[0][0];
-    await expect(bcrypt.compare('Temporary123!', created.passwordHash)).resolves.toBe(true);
+    await expect(
+      bcrypt.compare('Temporary123!', created.passwordHash),
+    ).resolves.toBe(true);
     expect(result.member).not.toHaveProperty('passwordHash');
     expect(mailService.sendTeamMemberInvitation).toHaveBeenCalledWith(
       'new@example.com',
       'New User',
       'owner@example.com',
       'Temporary123!',
-      'sales',
+      'team',
       'Store',
     );
   });
 
   it('rejects globally duplicate member emails', async () => {
-    businesses.findOne.mockResolvedValue({ subscriptionTier: 'starter', name: 'Store' });
+    businesses.findOne.mockResolvedValue({
+      subscriptionTier: 'starter',
+      name: 'Store',
+    });
     users.count.mockResolvedValue(0);
     users.findOne.mockResolvedValue({ id: 'existing' });
 
@@ -144,33 +176,30 @@ describe('TeamService', () => {
   });
 
   it('protects the last owner from demotion and removal', async () => {
-    const member = { id: 'owner-2', businessId: 'business-1', role: 'owner', email: 'other@example.com' };
+    const member = {
+      id: 'owner-2',
+      businessId: 'business-1',
+      role: 'owner',
+      email: 'other@example.com',
+    };
     users.findOne.mockResolvedValue(member);
     users.count.mockResolvedValue(1);
 
-    await expect(service.updateRole('owner-2', { role: 'sales' }, owner)).rejects.toBeInstanceOf(
+    await expect(
+      service.updateRole('owner-2', { role: 'sales' }, owner),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.remove('owner-2', owner)).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    await expect(service.remove('owner-2', owner)).rejects.toBeInstanceOf(BadRequestException);
     expect(users.remove).not.toHaveBeenCalled();
-  });
-
-  it('prevents managers from changing or removing managers', async () => {
-    const member = { id: 'manager-2', businessId: 'business-1', role: 'manager' };
-    users.findOne.mockResolvedValue(member);
-
-    await expect(service.updateRole('manager-2', { role: 'sales' }, manager)).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-    await expect(service.remove('manager-2', manager)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('requires the member to belong to the actor business', async () => {
     users.findOne.mockResolvedValue(null);
 
-    await expect(service.updateRole('member-from-business-2', { role: 'sales' }, owner)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.updateRole('member-from-business-2', { role: 'sales' }, owner),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(users.findOne).toHaveBeenCalledWith({
       where: { id: 'member-from-business-2', businessId: 'business-1' },
     });

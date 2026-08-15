@@ -1,6 +1,8 @@
 # Kunemi Workspace — Product todo
 
-**Last updated:** 2026-08-09  
+**Last updated:** 2026-08-15  
+**Active branch:** `feat/workspace-phase-a-simplify`
+
 **Scope:** Seller/business app only (`Workspace`). Not ShopFlow marketplace.  
 **Companion:** monorepo/security work stays in `todo.md`.
 
@@ -29,16 +31,16 @@ Goal: less confusion, one clear place to work.
 
 ### A1 — Kill `/workspace` (sales floor page)
 
-- [ ] Stop treating `/workspace` as a product surface
-- [ ] Merge useful bits into **Home** (`/`):
-  - [ ] Attention queue (expiring holds, payment review)
-  - [ ] Pending / needs-action orders
-  - [ ] Primary **New order** CTA
-- [ ] Chat → order lives on **Inbox** only (no mock “open chats” panel)
-- [ ] Remove sales-role redirect to `/workspace`
-- [ ] Remove nav item “Workspace”
-- [ ] Redirect `/workspace` → `/` (or `/inbox`) for bookmarks
-- [ ] Delete or archive dead sales-floor UI once Home covers it
+- [x] Stop treating `/workspace` as a product surface
+- [x] Merge useful bits into **Home** (`/`):
+  - [x] Attention queue (expiring holds, payment review)
+  - [x] Pending / needs-action orders
+  - [x] Primary **New order** CTA
+- [x] Chat → order lives on **Inbox** only (no mock “open chats” panel)
+- [x] Remove sales-role redirect to `/workspace`
+- [x] Remove nav item “Workspace”
+- [x] Redirect `/workspace` → `/` (or `/inbox`) for bookmarks
+- [x] Delete or archive dead sales-floor UI once Home covers it
 
 ### A2 — Navigation cleanup
 
@@ -56,12 +58,12 @@ Target IA:
 | Team       | Invite / remove people                            |
 | Settings   | Bank, tax, brand, currency, domain                |
 
-- [ ] Rename Inventory → **Products** (UI label; routes can follow later)
-- [ ] Rename Sales Team → **Team**
-- [ ] Hide **AI Agents** from nav (keep route unlisted or behind flag)
-- [ ] Demote Quotations to secondary (Orders action or Money tab) if primary nav feels crowded
-- [ ] Remove fake/static nav badges
-- [ ] One Home for all staff (no owner-only dashboard split based on demo role)
+- [x] Rename Inventory → **Products** (UI label; routes can follow later)
+- [x] Rename Sales Team → **Team**
+- [x] Hide **AI Agents** from nav (keep route unlisted or behind flag)
+- [x] Keep Quotations/Invoices under Commerce without fake badges (Store/Insights later)
+- [x] Remove fake/static nav badges
+- [x] One Home for all staff (no owner-only dashboard split based on demo role)
 
 ### A3 — Roles: Owner + Team only
 
@@ -72,22 +74,22 @@ Product surface (invite UI + copy):
 | **Owner** | Full: settings, bank, team, delete, money controls                       |
 | **Team**  | Day-to-day: orders, products, inbox, payments review, deliveries, quotes |
 
-- [ ] Product copy and invite UX: only Owner / Team
-- [ ] Map legacy backend roles if needed (`manager`/`sales`/`ops` → Team; keep `owner`)
-- [ ] Stop frontend role switcher demos that imply full RBAC product
-- [ ] Backend: enforce Owner-only for settings / bank / team manage / destructive actions
-- [ ] Backend: Team can run commerce ops; no separate manager/ops pages
-- [ ] Document: do **not** reintroduce manager/ops until a real page needs them
+- [x] Product copy and invite UX: only Owner / Team
+- [x] Map legacy backend roles if needed (`manager`/`sales`/`ops` → Team; keep `owner`)
+- [x] Stop frontend role switcher demos that imply full RBAC product
+- [x] Backend: enforce Owner-only for settings / bank / team manage / destructive actions
+- [x] Backend: Team can run commerce ops; no separate manager/ops pages
+- [x] Document: do **not** reintroduce manager/ops until a real page needs them
 - [ ] Password change / forced reset after invite (still required for multi-user)
 
 ### A4 — Home = action + light pulse
 
-- [ ] Attention: payment proofs, expiring holds, failed/expired payments
-- [ ] Today / 7d money snapshot (collected, outstanding, order count)
-- [ ] Recent orders
-- [ ] Low stock
-- [ ] Onboarding checklist only while incomplete
-- [ ] Empty states that push New order / Add product / Share store
+- [x] Attention: payment proofs, expiring holds, failed/expired payments
+- [x] Today / 7d money snapshot (collected, outstanding, order count) — via Home KPIs
+- [x] Recent orders
+- [x] Low stock
+- [x] Onboarding checklist only while incomplete
+- [x] Empty states that push New order / Add product (Share store → Phase C)
 
 **Done when:** a new seller lands on one Home and knows what to do next without reading docs.
 
@@ -222,12 +224,12 @@ Do not schedule until A–C are solid:
 
 ## Definition of “Workspace is ready for real SMBs”
 
-- [ ] One Home; no `/workspace` product page
-- [ ] Owner + Team only in product
-- [ ] Seller can run: product → order → pay → ship → track without mocks
+- [x] One Home; no `/workspace` product page
+- [x] Owner + Team only in product
+- [x] Seller can run: product → order → pay → ship → track without mocks
 - [ ] Insights answer money + funnel + top products for a period
 - [ ] Public store link creates the same orders sellers already manage
-- [ ] No AI Agents / marketplace noise in primary nav
+- [x] No AI Agents / marketplace noise in primary nav
 
 ---
 
@@ -240,5 +242,6 @@ Do not schedule until A–C are solid:
 | 2026-08-09 | Roles product surface: Owner + Team                         |
 | 2026-08-09 | Storefront = single-business checkout into Workspace orders |
 | 2026-08-09 | ShopFlow multi-seller stays out of this list                |
+| 2026-08-15 | Phase A on branch `feat/workspace-phase-a-simplify`         |
 
 Update this file as Workspace product work lands. Keep security, CI, and ShopFlow marketplace in `todo.md`.

@@ -1,90 +1,63 @@
 "use client"
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
-import { teamMembers, type TeamMember } from "@/lib/data"
-import type { UserRole } from "@/api/types"
-
 /**
- * System roles aligned with NestJS backend UserRole entity:
- * - Staff: "owner" | "manager" | "sales" | "ops"
- * - End User: "user"
- * - Platform Admin: "admin" | "super_admin"
+ * Legacy RoleProvider kept so Providers still mount.
+ * Product roles are Owner + Team via auth user + workspace-roles helpers.
+ * Do not reintroduce a demo role switcher.
  */
+
+import { createContext, useContext, useMemo } from "react"
+import type { UserRole } from "@/api/types"
+import { useAuth } from "@/lib/auth-context"
+import { isOwnerRole, productRoleLabel } from "@/lib/workspace-roles"
+
 export type AppRole = UserRole
 
 type RoleContextValue = {
   role: AppRole
+  /** @deprecated No-op — real role comes from auth session */
   setRole: (role: AppRole) => void
-  user: TeamMember
+  user: {
+    id: string
+    name: string
+    initials: string
+    role: string
+  }
   dense: boolean
+  isOwner: boolean
+  productRole: string
 }
 
 const RoleContext = createContext<RoleContextValue | null>(null)
 
-const STORAGE_KEY = "kunemi-workspace-role"
-
-const VALID_ROLES: UserRole[] = [
-  "owner",
-  "manager",
-  "sales",
-  "ops",
-  "user",
-  "admin",
-  "super_admin",
-]
-
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<AppRole>("owner")
-  const [hydrated, setHydrated] = useState(false)
+  const { user: authUser } = useAuth()
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as AppRole | null
-      if (saved && VALID_ROLES.includes(saved)) {
-        setRoleState(saved)
-      }
-    } catch {
-      // ignore
+  const value = useMemo((): RoleContextValue => {
+    const role = (authUser?.role as AppRole) || "owner"
+    const name = authUser?.fullName ?? "Account"
+    const initials = name
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase()
+    return {
+      role,
+      setRole: () => {
+        /* session role only */
+      },
+      user: {
+        id: authUser?.id ?? "",
+        name,
+        initials: initials || "?",
+        role: productRoleLabel(role),
+      },
+      dense: false,
+      isOwner: isOwnerRole(role),
+      productRole: productRoleLabel(role),
     }
-    setHydrated(true)
-  }, [])
-
-  const setRole = useCallback((next: AppRole) => {
-    setRoleState(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, next)
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  const user = useMemo(() => {
-    if (role === "owner" || role === "admin" || role === "super_admin") {
-      return teamMembers.find((a) => a.role === "owner") ?? teamMembers[0]
-    }
-    return (
-      teamMembers.find((a) => a.role === role) ??
-      teamMembers.find((a) => a.role === "sales") ??
-      teamMembers[1]
-    )
-  }, [role])
-
-  const value = useMemo(
-    () => ({
-      role: hydrated ? role : "owner",
-      setRole,
-      user,
-      dense: role === "sales" || role === "ops",
-    }),
-    [role, setRole, user, hydrated],
-  )
+  }, [authUser])
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
 }

@@ -12,13 +12,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { getApiErrorMessage, useInviteMember } from "@/api"
-import { useAuth } from "@/lib/auth-context"
-
-const ROLES: Array<{ value: "manager" | "sales" | "ops"; label: string; hint: string }> = [
-  { value: "sales", label: "Sales", hint: "Create orders, quotes, chat floor" },
-  { value: "ops", label: "Ops", hint: "Payments review, deliveries, inventory" },
-  { value: "manager", label: "Manager", hint: "Team + settings + full ops" },
-]
+import { TEAM_API_ROLE } from "@/lib/workspace-roles"
 
 export function InviteMemberSheet({
   open,
@@ -27,11 +21,9 @@ export function InviteMemberSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { user } = useAuth()
   const invite = useInviteMember()
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
-  const [role, setRole] = useState<"manager" | "sales" | "ops">("sales")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{
@@ -40,16 +32,10 @@ export function InviteMemberSheet({
   } | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const canInviteManager = user?.role === "owner"
-  const roleOptions = ROLES.filter(
-    (r) => r.value !== "manager" || canInviteManager,
-  )
-
   useEffect(() => {
     if (!open) return
     setFullName("")
     setEmail("")
-    setRole("sales")
     setPassword("")
     setError(null)
     setResult(null)
@@ -66,7 +52,7 @@ export function InviteMemberSheet({
       const res = await invite.mutateAsync({
         fullName: fullName.trim(),
         email: email.trim(),
-        role,
+        role: TEAM_API_ROLE,
         password: password.trim() || undefined,
       })
       setResult({
@@ -103,7 +89,8 @@ export function InviteMemberSheet({
             Invite teammate
           </SheetTitle>
           <SheetDescription>
-            Creates a login for this business. Share the temporary password securely.
+            Adds a Team login for this business. Share the temporary password
+            securely.
           </SheetDescription>
         </SheetHeader>
 
@@ -125,13 +112,21 @@ export function InviteMemberSheet({
                   <span className="font-medium">{result.email}</span>
                 </p>
                 <p className="mt-1">
+                  <span className="text-muted-foreground">Role:</span>{" "}
+                  <span className="font-medium">Team</span>
+                </p>
+                <p className="mt-1">
                   <span className="text-muted-foreground">Temp password:</span>{" "}
                   <span className="font-mono font-medium">
                     {result.temporaryPassword}
                   </span>
                 </p>
               </div>
-              <Button className="w-full gap-2" variant="outline" onClick={() => void copyCreds()}>
+              <Button
+                className="w-full gap-2"
+                variant="outline"
+                onClick={() => void copyCreds()}
+              >
                 <Copy className="size-4" />
                 {copied ? "Copied" : "Copy credentials"}
               </Button>
@@ -151,22 +146,14 @@ export function InviteMemberSheet({
                 placeholder="teammate@email.com"
                 type="email"
               />
-              <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Role</span>
-                <select
-                  value={role}
-                  onChange={(e) =>
-                    setRole(e.target.value as "manager" | "sales" | "ops")
-                  }
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {roleOptions.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label} — {r.hint}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm">
+                <p className="font-medium">Role: Team</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Day-to-day access: orders, products, inbox, payments review,
+                  deliveries, quotes. Only owners manage settings and team
+                  seats.
+                </p>
+              </div>
               <Field
                 label="Temp password (optional)"
                 value={password}
@@ -177,7 +164,9 @@ export function InviteMemberSheet({
               <p className="text-[11px] text-muted-foreground">
                 Seat limits apply by plan. Email must not already be registered.
               </p>
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
             </>
           )}
         </div>
@@ -189,7 +178,11 @@ export function InviteMemberSheet({
             </Button>
           ) : (
             <>
-              <Button variant="outline" className="bg-card" onClick={() => onOpenChange(false)}>
+              <Button
+                variant="outline"
+                className="bg-card"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
               <Button

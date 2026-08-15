@@ -71,7 +71,7 @@ export default function InventoryPage() {
 
   return (
     <DashboardShell
-      title="Inventory"
+      title="Products"
       subtitle="Optional catalog — stock holds when you use variants; freeform orders work without products."
     >
       <div className="flex flex-col gap-4 md:gap-6">

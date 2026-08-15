@@ -7,10 +7,14 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-const MEMBER_ROLES = ['manager', 'sales', 'ops'] as const;
+/** Product surface: Team only. Stored as `sales` for backward compatibility. */
+const MEMBER_ROLES = ['sales'] as const;
 
 export class InviteMemberDto {
-  @ApiProperty({ example: 'bisi@lagosthreads.co', description: 'Staff Email Address' })
+  @ApiProperty({
+    example: 'bisi@lagosthreads.co',
+    description: 'Staff Email Address',
+  })
   @IsEmail()
   email!: string;
 
@@ -19,11 +23,18 @@ export class InviteMemberDto {
   @MinLength(1)
   fullName!: string;
 
-  @ApiProperty({ example: 'sales', enum: ['manager', 'sales', 'ops'], description: 'Staff Role' })
+  @ApiProperty({
+    example: 'sales',
+    enum: ['sales'],
+    description: 'Team role (product: Team; stored as sales)',
+  })
   @IsIn(MEMBER_ROLES)
-  role!: 'manager' | 'sales' | 'ops';
+  role!: 'sales';
 
-  @ApiPropertyOptional({ example: 'TempPass123!', description: 'Optional initial password (min 8 chars)' })
+  @ApiPropertyOptional({
+    example: 'TempPass123!',
+    description: 'Optional initial password (min 8 chars)',
+  })
   @IsOptional()
   @IsString()
   @MinLength(8)
@@ -31,7 +42,12 @@ export class InviteMemberDto {
 }
 
 export class UpdateMemberRoleDto {
-  @ApiProperty({ example: 'manager', enum: ['owner', 'manager', 'sales', 'ops'], description: 'Updated role' })
-  @IsIn(['owner', 'manager', 'sales', 'ops'])
-  role!: 'owner' | 'manager' | 'sales' | 'ops';
+  @ApiProperty({
+    example: 'sales',
+    enum: ['owner', 'sales'],
+    description:
+      'Owner or Team (sales). Legacy manager/ops may still exist in DB.',
+  })
+  @IsIn(['owner', 'sales'])
+  role!: 'owner' | 'sales';
 }
