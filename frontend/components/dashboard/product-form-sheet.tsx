@@ -289,7 +289,7 @@ export function ProductFormSheet({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  placeholder="Shown on ShopFlow storefront"
+                  placeholder="Shown on your Workspace store"
                   className="resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </label>
@@ -309,7 +309,7 @@ export function ProductFormSheet({
                   onChange={(e) => setPublishedToStore(e.target.checked)}
                   className="size-3.5 rounded border-border"
                 />
-                Publish to ShopFlow store
+                Publish to Workspace store
               </label>
             </>
           ) : null}

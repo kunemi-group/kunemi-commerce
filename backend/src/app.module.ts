@@ -14,7 +14,7 @@ import { DeliveriesModule } from './workspace/fulfillment/deliveries/deliveries.
 import { TrackingModule } from './workspace/fulfillment/tracking/tracking.module';
 import { DocumentsModule } from './shared/documents/documents.module';
 import { StorageModule } from './shared/storage/storage.module';
-import { StoreModule } from './shopflow/catalog/store.module';
+import { StorefrontModule } from './workspace/storefront/storefront.module';
 import { ChatModule } from './shared/chat/chat.module';
 import { AdminModule } from './admin/admin.module';
 import { MailModule } from './shared/mail/mail.module';
@@ -60,7 +60,11 @@ class RootController {
         'GET /api/payments',
         'PATCH /api/payments/:id/verify',
       ],
-      storage: ['POST /api/uploads', 'GET /api/media/:token', 'GET /api/storage/status'],
+      storage: [
+        'POST /api/uploads',
+        'GET /api/media/:token',
+        'GET /api/storage/status',
+      ],
       storefront: [
         'GET /api/store/:slug',
         'GET /api/store/:slug/products',
@@ -115,7 +119,8 @@ class RootController {
             database: config.get<string>('SQLITE_PATH', 'shopflow.dev.sqlite'),
             entities,
             synchronize:
-              !isProduction && config.get<string>('ALLOW_SQLITE_SYNC') === 'true',
+              !isProduction &&
+              config.get<string>('ALLOW_SQLITE_SYNC') === 'true',
             logging,
           };
         }
@@ -147,7 +152,7 @@ class RootController {
     DeliveriesModule,
     TrackingModule,
     DocumentsModule,
-    StoreModule,
+    StorefrontModule,
     ChatModule,
     AdminModule,
     MailModule,

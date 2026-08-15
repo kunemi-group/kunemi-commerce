@@ -8,6 +8,9 @@ Workspace contains seller-facing operations:
 - `orders/` — seller-created and seller-managed orders
 - `payments/` — seller-owned payment and bank-transfer review flow
 - `fulfillment/` — deliveries and tracking
+- `storefront/` — **single-business public shop** + guest checkout → Workspace orders
 
-Additional seller operations such as analytics may move here as the boundary
-is extended. Documents and chat remain shared because both surfaces use them.
+The storefront is **not** ShopFlow. ShopFlow is the multi-seller marketplace
+(later). Storefront checkout always creates seller-owned Workspace `Order`s.
+
+Documents and chat remain shared because both surfaces use them.

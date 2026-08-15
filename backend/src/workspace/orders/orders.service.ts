@@ -7,8 +7,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Like, Repository } from 'typeorm';
 import { computeOrderTotals } from '../../common/money';
+import { normalizeCurrency } from '../../common/currency';
 import type { AuthUser } from '../../common/types/auth-user';
 import { Business } from '../../database/entities/business.entity';
 import { Delivery } from '../../database/entities/delivery.entity';
@@ -16,10 +17,11 @@ import { Order } from '../../database/entities/order.entity';
 import { OrderItem } from '../../database/entities/order-item.entity';
 import { OrderStatusHistory } from '../../database/entities/order-status-history.entity';
 import { Payment } from '../../database/entities/payment.entity';
+import { Product } from '../../database/entities/product.entity';
 import { ProductVariant } from '../../database/entities/product-variant.entity';
 import { PaymentsService } from '../payments/payments.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-
+import type { StoreCheckoutDto } from '../storefront/dto/store-checkout.dto';
 import { MailService } from '../../shared/mail/mail.service';
 
 /** Default window for customer bank transfer (also stock hold when catalog lines). */
@@ -264,6 +266,252 @@ export class OrdersService {
         inventoryOptional: true,
       };
     });
+  }
+
+  /**
+   * Public Workspace storefront checkout (single business).
+   * Validates published catalog variants, reserves stock, creates seller Order + pay link.
+   * Not a ShopFlow marketplace order.
+   */
+  async createFromStorefront(businessId: string, dto: StoreCheckoutDto) {
+    const business = await this.businesses.findOne({
+      where: { id: businessId },
+    });
+    if (!business || !business.storeEnabled) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const idempotencyKey = dto.idempotencyKey?.trim();
+    if (idempotencyKey) {
+      const existing = await this.findStorefrontByIdempotency(
+        businessId,
+        idempotencyKey,
+      );
+      if (existing) return existing;
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const variantRepo = manager.getRepository(ProductVariant);
+      const productRepo = manager.getRepository(Product);
+      const orderRepo = manager.getRepository(Order);
+      const itemRepo = manager.getRepository(OrderItem);
+      const historyRepo = manager.getRepository(OrderStatusHistory);
+
+      type BuiltLine = {
+        variantId: string;
+        description: string;
+        quantity: number;
+        unitPriceCents: number;
+        taxExempt: boolean;
+      };
+
+      const built: BuiltLine[] = [];
+
+      for (let i = 0; i < dto.items.length; i++) {
+        const item = dto.items[i];
+        const variant = await variantRepo.findOne(
+          this.findOpts({
+            where: {
+              id: item.variantId,
+              businessId,
+            },
+          }),
+        );
+        if (!variant) {
+          throw new BadRequestException(
+            `Item ${i + 1}: product variant not found in this store`,
+          );
+        }
+
+        const product = await productRepo.findOne({
+          where: {
+            id: variant.productId,
+            businessId,
+            publishedToStore: true,
+          },
+        });
+        if (!product) {
+          throw new BadRequestException(
+            `Item ${i + 1}: product is not published to the store`,
+          );
+        }
+
+        const available = variant.stockOnHand - variant.stockReserved;
+        if (available < item.quantity) {
+          throw new BadRequestException(
+            `Item ${i + 1}: insufficient stock (available ${available})`,
+          );
+        }
+        variant.stockReserved += item.quantity;
+        await variantRepo.save(variant);
+
+        const attrLabel = variant.attributes
+          ? Object.values(variant.attributes).join(' / ')
+          : null;
+        const desc =
+          [product.name, attrLabel, variant.sku].filter(Boolean).join(' · ') ||
+          product.name;
+
+        built.push({
+          variantId: variant.id,
+          description: desc,
+          quantity: item.quantity,
+          unitPriceCents: variant.priceCents,
+          taxExempt: Boolean(variant.taxExempt),
+        });
+      }
+
+      const totals = computeOrderTotals({
+        lines: built,
+        shippingFeeCents:
+          dto.shippingFeeCents ?? business.defaultShippingFeeCents,
+        taxEnabled: business.taxEnabled,
+        taxRatePercent: Number(business.taxRatePercent),
+      });
+
+      const reservedUntil = new Date(
+        Date.now() + PAYMENT_WINDOW_MINUTES * 60 * 1000,
+      );
+
+      const order = orderRepo.create({
+        businessId,
+        agentId: null,
+        customerName: dto.customerName.trim(),
+        customerPhone: dto.customerPhone.trim(),
+        customerEmail: dto.customerEmail?.trim() || null,
+        deliveryAddress: dto.deliveryAddress?.trim() || null,
+        status: 'pending',
+        reservedUntil,
+        shippingFeeCents: totals.shippingFeeCents,
+        taxCents: totals.taxCents,
+        subtotalCents: totals.subtotalCents,
+        totalCents: totals.totalCents,
+      });
+      await orderRepo.save(order);
+
+      const items = built.map((line) =>
+        itemRepo.create({
+          orderId: order.id,
+          variantId: line.variantId,
+          description: line.description,
+          quantity: line.quantity,
+          unitPriceCents: line.unitPriceCents,
+          taxExempt: line.taxExempt,
+        }),
+      );
+      await itemRepo.save(items);
+
+      const payment = await this.paymentsService.createForOrder(manager, {
+        businessId,
+        orderId: order.id,
+        amountCents: order.totalCents,
+      });
+
+      const keyTag = idempotencyKey ? ` · idempotency:${idempotencyKey}` : '';
+      await historyRepo.save(
+        historyRepo.create({
+          orderId: order.id,
+          fromStatus: null,
+          toStatus: 'pending',
+          changedBy: null,
+          reason: `Storefront checkout · stock reserved · bank transfer within ${PAYMENT_WINDOW_MINUTES}m${keyTag}`,
+        }),
+      );
+
+      if (order.customerEmail) {
+        const shortRef = order.id.slice(0, 8).toUpperCase();
+        void this.mailService.sendOrderConfirmation(
+          order.customerEmail,
+          order.customerName,
+          shortRef,
+          order.totalCents,
+          business.currency || 'NGN',
+        );
+      }
+
+      return this.toStorefrontCheckoutResult(order, items, payment, business);
+    });
+  }
+
+  private async findStorefrontByIdempotency(businessId: string, key: string) {
+    const history = await this.dataSource
+      .getRepository(OrderStatusHistory)
+      .findOne({
+        where: {
+          reason: Like(`%idempotency:${key}%`),
+        },
+        order: { createdAt: 'DESC' },
+      });
+    if (!history) return null;
+
+    const order = await this.orders.findOne({
+      where: { id: history.orderId, businessId },
+      relations: { items: true },
+    });
+    if (!order) return null;
+
+    const payment = await this.payments.findOne({
+      where: { orderId: order.id, businessId },
+    });
+    const business = await this.businesses.findOne({
+      where: { id: businessId },
+    });
+    if (!payment || !business) return null;
+
+    return this.toStorefrontCheckoutResult(
+      order,
+      order.items ?? [],
+      payment,
+      business,
+    );
+  }
+
+  private toStorefrontCheckoutResult(
+    order: Order,
+    items: OrderItem[],
+    payment: Payment,
+    business: Business,
+  ) {
+    return {
+      id: order.id,
+      status: order.status,
+      source: 'workspace_storefront' as const,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customerEmail: order.customerEmail,
+      deliveryAddress: order.deliveryAddress,
+      items: items.map((it) => ({
+        id: it.id,
+        variantId: it.variantId,
+        description: it.description,
+        quantity: it.quantity,
+        unitPriceCents: it.unitPriceCents,
+        taxExempt: it.taxExempt,
+      })),
+      subtotalCents: order.subtotalCents,
+      taxCents: order.taxCents,
+      shippingFeeCents: order.shippingFeeCents,
+      totalCents: order.totalCents,
+      reservedUntil: order.reservedUntil?.toISOString() ?? null,
+      paymentWindowMinutes: PAYMENT_WINDOW_MINUTES,
+      payment: {
+        id: payment.id,
+        method: payment.method,
+        status: payment.status,
+        reference: payment.reference,
+        paymentToken: payment.paymentToken,
+        paymentUrl: this.paymentsService.paymentUrl(payment.paymentToken),
+        amountCents: payment.amountCents,
+      },
+      paymentLink: this.paymentsService.paymentUrl(payment.paymentToken),
+      bankTransfer: {
+        bankName: business.bankName,
+        bankAccountName: business.bankAccountName,
+        bankAccountNumber: business.bankAccountNumber,
+        reference: payment.reference,
+      },
+      currency: normalizeCurrency(business.currency),
+    };
   }
 
   async list(user: AuthUser) {

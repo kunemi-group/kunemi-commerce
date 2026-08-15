@@ -129,37 +129,40 @@ Goal: Instagram bio → shop → same Workspace orders sellers already manage.
 
 **Not in scope here:** multi-seller cart, platform escrow, ShopFlow marketplace (see `todo.md` P2).
 
+**Architecture note:** Storefront + checkout live under **Workspace**
+(`backend/src/workspace/storefront/`). Not ShopFlow marketplace.
+
 ### C1 — Public store surface
 
-- [ ] Public store routes (e.g. `/s/[slug]` or subdomain via edge)
-- [ ] Store home: brand, featured/published products
-- [ ] Product detail page
-- [ ] Cart (single business only)
-- [ ] Mobile-first layout; brand color + logo from business settings
+- [x] Public store routes (`/s/[slug]` + API `/api/store/:slug`)
+- [x] Store home: brand, published products
+- [x] Product detail page
+- [x] Cart (single business only, localStorage)
+- [x] Mobile-first layout; brand color + logo from business settings
 
 ### C2 — Checkout → existing Workspace order
 
-- [ ] Checkout creates **Workspace `Order`** (not a new order type)
-- [ ] Server validates catalog prices, stock, tax/shipping rules
-- [ ] Reuse bank-transfer pay token + `/pay/[token]`
-- [ ] Stock reserve on checkout where variants exist
-- [ ] Customer contact + delivery address capture
-- [ ] Order visible immediately in Workspace Orders / Home
+- [x] Checkout creates **Workspace `Order`** (`OrdersService.createFromStorefront`)
+- [x] Server validates published catalog prices, stock, tax/shipping
+- [x] Reuse bank-transfer pay token + `/pay/[token]`
+- [x] Stock reserve on checkout for variants
+- [x] Customer contact + delivery address capture
+- [x] Order appears in Workspace Orders / Home (same order table)
 
 ### C3 — Seller controls in Workspace
 
-- [ ] **Store** settings: enable/disable, slug, share link, WhatsApp button
-- [ ] Product **Published to store** toggle (already partially present — finish UX)
-- [ ] “View store” / “Copy product link” from Products
-- [ ] Basic theme: logo, color, short about blurb
-- [ ] Optional: default shipping for store checkouts
+- [x] **Store** nav page: share link, enable checklist
+- [x] Product **Published to store** toggle (Workspace wording)
+- [x] Settings store slug / enable + public path copy
+- [x] Basic theme: logo + brand color from business
+- [x] Default shipping applied at store checkout
 
 ### C4 — Quality bar
 
-- [ ] Empty store state with checklist (add product → publish → share link)
-- [ ] Idempotent checkout (no double orders on refresh)
-- [ ] Guest checkout first (buyer accounts optional later)
-- [ ] Tests: publish filter, stock hold, pay claim path from store order
+- [x] Empty store state + seller go-live checklist
+- [x] Idempotent checkout via client key + history reason
+- [x] Guest checkout first
+- [ ] Broader automated tests (publish filter, stock hold e2e) — follow-up
 
 **Done when:** seller shares one link, buyer pays by transfer, seller fulfills in the same Orders UI.
 
@@ -229,23 +232,24 @@ Do not schedule until A–C are solid:
 - [x] Owner + Team only in product
 - [x] Seller can run: product → order → pay → ship → track without mocks
 - [x] Insights answer money + funnel + top products for a period
-- [ ] Public store link creates the same orders sellers already manage
+- [x] Public store link creates the same orders sellers already manage
 - [x] No AI Agents / marketplace noise in primary nav
 
 ---
 
 ## Notes / decisions log
 
-| Date       | Decision                                                    |
-| ---------- | ----------------------------------------------------------- |
-| 2026-08-09 | Separate this file from monorepo `todo.md`                  |
-| 2026-08-09 | Remove `/workspace` sales floor; Home + Inbox only          |
-| 2026-08-09 | Roles product surface: Owner + Team                         |
-| 2026-08-09 | Storefront = single-business checkout into Workspace orders |
-| 2026-08-09 | ShopFlow multi-seller stays out of this list                |
-| 2026-08-15 | Phase A on branch `feat/workspace-phase-a-simplify`         |
-| 2026-08-15 | Phase B1 Insights page + period analytics                   |
-| 2026-08-15 | A3 password force-change after invite + Owner/Team reset    |
-| 2026-08-15 | DB migrate legacy manager/sales/ops → team role             |
+| Date       | Decision                                                     |
+| ---------- | ------------------------------------------------------------ |
+| 2026-08-09 | Separate this file from monorepo `todo.md`                   |
+| 2026-08-09 | Remove `/workspace` sales floor; Home + Inbox only           |
+| 2026-08-09 | Roles product surface: Owner + Team                          |
+| 2026-08-09 | Storefront = single-business checkout into Workspace orders  |
+| 2026-08-09 | ShopFlow multi-seller stays out of this list                 |
+| 2026-08-15 | Phase A on branch `feat/workspace-phase-a-simplify`          |
+| 2026-08-15 | Phase B1 Insights page + period analytics                    |
+| 2026-08-15 | A3 password force-change after invite + Owner/Team reset     |
+| 2026-08-15 | DB migrate legacy manager/sales/ops → team role              |
+| 2026-08-15 | Phase C Workspace storefront (not ShopFlow) + guest checkout |
 
 Update this file as Workspace product work lands. Keep security, CI, and ShopFlow marketplace in `todo.md`.

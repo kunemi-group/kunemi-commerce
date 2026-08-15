@@ -1,11 +1,6 @@
 /** Kunemi Workspace API layer — Axios + TanStack Query */
 
-export {
-  apiClient,
-  API_BASE,
-  getApiErrorMessage,
-  toApiError,
-} from "./client"
+export { apiClient, API_BASE, getApiErrorMessage, toApiError } from "./client"
 export { queryKeys } from "./keys"
 export { getQueryClient, makeQueryClient } from "./query-client"
 export * from "./types"
@@ -21,6 +16,7 @@ export * from "./services/team"
 export * from "./services/documents"
 export * from "./services/uploads"
 export * from "./services/chat"
+export * from "./services/storefront"
 
 export * from "./hooks/use-orders"
 export * from "./hooks/use-products"

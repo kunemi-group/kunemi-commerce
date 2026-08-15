@@ -257,7 +257,7 @@ export function SettingsPanel() {
         storeEnabled,
       })
       await refresh()
-      setMessage("ShopFlow storefront settings saved")
+      setMessage("Business storefront settings saved")
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed")
     } finally {
@@ -498,11 +498,11 @@ export function SettingsPanel() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="size-4 text-primary" />
-                ShopFlow storefront
+                Business storefront
               </CardTitle>
               <CardDescription>
-                Public catalog API for ShopFlow social store — Workspace is the
-                backend of record
+                Single-business public shop on Workspace (not ShopFlow
+                marketplace). Buyers check out as guests into your Orders.
               </CardDescription>
             </div>
             <Button
@@ -534,18 +534,16 @@ export function SettingsPanel() {
               Store enabled
             </label>
             <div className="sm:col-span-2 rounded-lg border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">
-                Public endpoints for ShopFlow
+              <p className="font-medium text-foreground">Public shop</p>
+              <p className="mt-1 font-mono text-xs">
+                /s/{storeSlug || "{slug}"}
               </p>
-              <p className="mt-1 font-mono">
-                GET /api/store/{storeSlug || "{slug}"}
-              </p>
-              <p className="font-mono">
+              <p className="font-mono text-xs">
                 GET /api/store/{storeSlug || "{slug}"}/products
               </p>
               <p className="mt-2">
-                Products with “Publish to ShopFlow store” appear here. Images
-                use R2 when configured.
+                Products with “Publish to Workspace store” appear here. Checkout
+                creates Workspace orders with bank-transfer pay links.
               </p>
             </div>
           </CardContent>

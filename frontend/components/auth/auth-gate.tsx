@@ -13,6 +13,7 @@ const PUBLIC_PREFIXES = [
   "/reset-password",
   "/pay",
   "/track",
+  "/s", // public Workspace business storefront
 ]
 
 function isPublic(path: string) {

@@ -1,23 +1,31 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { normalizeCurrency } from '../../common/currency';
 import { Business } from '../../database/entities/business.entity';
 import { Product } from '../../database/entities/product.entity';
-import { normalizeCurrency } from '../../common/currency';
 import { StorageService } from '../../shared/storage/storage.service';
+import { OrdersService } from '../orders/orders.service';
+import { StoreCheckoutDto } from './dto/store-checkout.dto';
 
 /**
- * Public storefront catalog for ShopFlow (and other storefronts).
- * Kunemi Workspace is the system of record; ShopFlow only reads.
+ * Single-business public storefront for Kunemi Workspace.
+ * Catalog + guest checkout → seller-owned Workspace orders.
+ * Not ShopFlow marketplace.
  */
 @Injectable()
-export class StoreService {
+export class StorefrontService {
   constructor(
     @InjectRepository(Business)
     private readonly businesses: Repository<Business>,
     @InjectRepository(Product)
     private readonly products: Repository<Product>,
     private readonly storage: StorageService,
+    private readonly orders: OrdersService,
   ) {}
 
   async getStore(slug: string) {
@@ -58,6 +66,14 @@ export class StoreService {
     };
   }
 
+  async checkout(slug: string, dto: StoreCheckoutDto) {
+    const business = await this.findBySlug(slug);
+    if (!dto.items?.length) {
+      throw new BadRequestException('Cart is empty');
+    }
+    return this.orders.createFromStorefront(business.id, dto);
+  }
+
   private async findBySlug(slug: string) {
     const normalized = slug.trim().toLowerCase();
     const business = await this.businesses.findOne({
@@ -77,7 +93,7 @@ export class StoreService {
       whatsappNumber: b.whatsappNumber,
       email: b.email,
       address: b.address,
-      brandColor: b.brandColor,
+      brandColor: b.brandColor || '#4f6bed',
       logoUrl: this.storage.publicUrl(b.logoKey),
       currency: normalizeCurrency(b.currency),
       tax: {
@@ -88,17 +104,16 @@ export class StoreService {
       shipping: {
         defaultFeeCents: b.defaultShippingFeeCents,
       },
-      /** ShopFlow should create checkout intent back into Workspace orders later */
-      workspaceApiHint: '/api/store/:slug',
+      /** Public Workspace storefront path (not ShopFlow) */
+      storePath: b.storeSlug ? `/s/${b.storeSlug}` : null,
     };
   }
 
   private toPublicProduct(p: Product) {
-    const gallery = this.parseGallery(p.galleryKeysJson).map(
-      (k) => this.storage.publicUrl(k)!,
+    const gallery = this.parseGallery(p.galleryKeysJson).map((k) =>
+      this.storage.publicUrl(k)!,
     );
-    const imageUrl =
-      this.storage.publicUrl(p.imageKey) || gallery[0] || null;
+    const imageUrl = this.storage.publicUrl(p.imageKey) || gallery[0] || null;
 
     return {
       id: p.id,

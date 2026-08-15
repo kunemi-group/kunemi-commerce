@@ -10,6 +10,7 @@ import {
   FileText,
   Receipt,
   BarChart3,
+  Store,
   type LucideIcon,
 } from "lucide-react"
 
@@ -28,8 +29,8 @@ export interface NavGroup {
 
 /**
  * Workspace IA:
- * Home · Insights · Inbox · Orders · Products · Money · Deliveries · Quotes · Invoices · Team · Settings
- * Store later (Phase C). AI Agents stay unlisted.
+ * Home · Insights · Inbox · Orders · Products · Store · Money · …
+ * Store = single-business Workspace shop (not ShopFlow marketplace).
  */
 export const navGroups: NavGroup[] = [
   {
@@ -40,6 +41,7 @@ export const navGroups: NavGroup[] = [
       { label: "Inbox", icon: MessageSquare, href: "/inbox" },
       { label: "Orders", icon: ShoppingCart, href: "/orders" },
       { label: "Products", icon: Package, href: "/inventory" },
+      { label: "Store", icon: Store, href: "/store" },
     ],
   },
   {

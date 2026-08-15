@@ -299,6 +299,33 @@ export type UploadResult = {
   filename: string
 }
 
+/** Public Workspace single-business storefront (not ShopFlow marketplace). */
+export type PublicStore = {
+  id: string
+  name: string
+  slug: string | null
+  whatsappNumber: string | null
+  email: string | null
+  address: string | null
+  brandColor: string
+  logoUrl: string | null
+  currency: string
+  tax: { enabled: boolean; ratePercent: number; label: string }
+  shipping: { defaultFeeCents: number }
+  storePath: string | null
+}
+
+export type PublicStoreVariant = {
+  id: string
+  sku: string | null
+  attributes: Record<string, string> | null
+  priceCents: number
+  available: number
+  taxExempt: boolean
+  imageUrl: string | null
+  inStock: boolean
+}
+
 export type PublicStoreProduct = {
   id: string
   name: string
@@ -307,16 +334,39 @@ export type PublicStoreProduct = {
   galleryUrls: string[]
   publishedToStore: boolean
   fromPriceCents: number | null
-  variants: Array<{
-    id: string
-    sku: string | null
-    attributes: Record<string, string> | null
-    priceCents: number
-    available: number
-    taxExempt: boolean
-    imageUrl: string | null
-    inStock: boolean
-  }>
+  variants: PublicStoreVariant[]
+}
+
+export type StoreCheckoutPayload = {
+  customerName: string
+  customerPhone: string
+  customerEmail?: string
+  deliveryAddress?: string
+  shippingFeeCents?: number
+  idempotencyKey?: string
+  items: Array<{ variantId: string; quantity: number }>
+}
+
+export type StoreCheckoutResult = {
+  id: string
+  status: string
+  source: string
+  totalCents: number
+  currency: string
+  paymentLink: string
+  payment: {
+    paymentToken: string
+    paymentUrl: string
+    reference: string
+    amountCents: number
+  }
+  bankTransfer: {
+    bankName: string | null
+    bankAccountName: string | null
+    bankAccountNumber: string | null
+    reference: string
+  }
+  reservedUntil: string | null
 }
 
 export type AuthMeResponse = {
